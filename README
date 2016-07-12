@@ -1,0 +1,14 @@
+Usage instructions:
+./funcwatch <program name> <function name>
+The included test program has a function called foo that gets run 4 times. Foo has a parameter called i. For each run you will see the name, size and value of each parameter, in this case just i.
+To run funcwatch on test do the following:
+./funcwatch test foo
+Note that size and value are not working yet.
+
+
+## UPDATE on Dec. 1, 2015
+You can now also pass arguments to the target program. 
+funcwatch <function> <program> [args...]
+
+e.g.
+funcwatch foo test a b c d
