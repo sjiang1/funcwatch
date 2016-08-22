@@ -43,6 +43,7 @@ int main(int argc, char *argv[]) {
     if(run->return_values != NULL) {
       funcwatch_param r = run->return_values[i];
       funcwatch_param *p = &r;
+      print_param(f, p, 1);
       while(p->next != NULL) {
 	p = p->next;
 	print_param(f, p, 1);
