@@ -37,3 +37,20 @@
 
 # Binary files
 *~
+FuncwatchResults/
+funcwatch
+tests_funcwatch/test
+tests_funcwatch/test_multiple_parameters_0
+tests_funcwatch/test_pointer_0_int
+tests_funcwatch/test_pointer_1_char
+tests_funcwatch/test_pointer_2_struct0
+tests_funcwatch/test_pointer_3_struct1
+tests_funcwatch/test_primitive_0_int
+tests_funcwatch/test_primitive_1_char
+tests_funcwatch/test_primitive_2_uchar
+tests_funcwatch/test_primitive_3_short
+tests_funcwatch/test_struct_0
+tests_funcwatch/test_struct_1_pointer_member
+tests_funcwatch/test_struct_2_struct_pointer_member
+tests_funcwatch/test_union_0
+tmp
