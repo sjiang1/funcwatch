@@ -23,7 +23,7 @@ int main(int argc, char *argv[]) {
     return 0;
   }
 
-  char outfile[100]; 
+  char outfile[500]; 
   print_outfile_name(outfile, argc, argv);
   FILE *f = fopen(outfile, "w");
   if(f == 0){
