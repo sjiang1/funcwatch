@@ -22,10 +22,6 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "Warning: function %s was never called. No output will be created.\n", run->func_name);
     return 0;
   }
-  if(run->params == 0){
-    fprintf(stderr, "Warning: function %s does not have parameters or returns.\n", run->func_name);
-    return 0;
-  }
   
   char outfile[500]; 
   print_outfile_name(outfile, argc, argv);
@@ -38,13 +34,20 @@ int main(int argc, char *argv[]) {
   fprintf(f, "%s\n", "Is Return Flag, Function, Call Number, Variable Name, Variable Size, Usage Flags, Variable Type, Value ");
   for(int i = 0; i < run->num_calls; ++i)  {
     // print input valuse
-    funcwatch_param *p = run->params[i];
-    while(p != NULL) {
-      print_param(f, p, 0);
-      p = p->next;
+    if(run->params == 0){
+      fprintf(stderr, "Warning: function %s does not have parameters.\n", run->func_name);
+    }else{
+      funcwatch_param *p = run->params[i];
+      while(p != NULL) {
+	print_param(f, p, 0);
+	p = p->next;
+      }
     }
     // print return
-    if(run->return_values != NULL) {
+    if(run->return_values == NULL) {
+      fprintf(stderr, "Warning: function %s does not have return value.\n", run->func_name);
+    }
+    else{
       funcwatch_param r = run->return_values[i];
       funcwatch_param *p = &r;
       print_param(f, p, 1);
@@ -54,10 +57,12 @@ int main(int argc, char *argv[]) {
       }
     }
     // print parameters values when function returns
-    funcwatch_param *ret_p = run->ret_params[i];
-    while(ret_p != NULL) {
-      print_param(f, ret_p, 1);
-      ret_p = ret_p->next;
+    if(run->params != 0){
+      funcwatch_param *ret_p = run->ret_params[i];
+      while(ret_p != NULL) {
+	print_param(f, ret_p, 1);
+	ret_p = ret_p->next;
+      }
     }
   }
 
