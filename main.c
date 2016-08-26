@@ -19,10 +19,14 @@ int main(int argc, char *argv[]) {
   if(run == 0)
     return 0;
   if(run->num_calls == 0) {
-    fprintf(stderr, "Warning: function %s was never called. No output will be created.", run->func_name);
+    fprintf(stderr, "Warning: function %s was never called. No output will be created.\n", run->func_name);
     return 0;
   }
-
+  if(run->params == 0){
+    fprintf(stderr, "Warning: function %s does not have parameters or returns.\n", run->func_name);
+    return 0;
+  }
+  
   char outfile[500]; 
   print_outfile_name(outfile, argc, argv);
   FILE *f = fopen(outfile, "w");
