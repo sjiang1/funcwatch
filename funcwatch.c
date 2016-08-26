@@ -255,7 +255,7 @@ void funcwatch_get_params(funcwatch_run *run, int is_return) {
 	// evalute_address will extract the value at the register
 	p->value = address;
 	p->addr = 0;
-	debug_printf("Warning: There is a gug regarding to evalute_address from a register. Parameter %s is skipped.\n", p->name);
+	debug_printf("Warning: There is a bug regarding to evalute_address from a register. Parameter %s is skipped.\n", p->name);
       }
       else {
 	void *tmpptr = (void *)address;
