@@ -53,4 +53,5 @@ tests/test_struct_0
 tests/test_struct_1_pointer_member
 tests/test_struct_2_struct_pointer_member
 tests/test_union_0
+tests/test_union_1
 tmp

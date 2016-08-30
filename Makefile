@@ -15,7 +15,7 @@ all: funcwatch tests/test \
      tests/test_primitive_0_int tests/test_primitive_1_char tests/test_primitive_2_uchar tests/test_primitive_3_short \
      tests/test_multiple_parameters_0 \
      tests/test_pointer_0_int tests/test_pointer_1_char tests/test_pointer_2_struct0 tests/test_pointer_3_struct1 \
-     tests/test_union_0
+     tests/test_union_0 tests/test_union_1
 
 clean:
 	rm -f funcwatch tests/test \
@@ -23,7 +23,7 @@ clean:
 		tests/test_primitive_0_int tests/test_primitive_1_char tests/test_primitive_2_uchar tests/test_primitive_3_short \
 		tests/test_multiple_parameters_0 \
 		tests/test_pointer_0_int tests/test_pointer_1_char tests/test_pointer_2_struct0 tests/test_pointer_3_struct1 \
-		tests/test_union_0 
+		tests/test_union_0 tests/test_union_1 
 		`find -name \*.o` 
 
 funcwatch: main.o funcwatch.o expression_stack.o $(arch_srcfiles) 
@@ -42,6 +42,7 @@ tests/test_pointer_1_char: 			tests/test_pointer_1_char.o
 tests/test_pointer_2_struct0: 			tests/test_pointer_2_struct0.o
 tests/test_pointer_3_struct1: 			tests/test_pointer_3_struct1.o
 tests/test_union_0: 				tests/test_union_0.o
+tests/test_union_1: 				tests/test_union_1.o
 
 #summarize_results:summarize_results.o util.o parameter.o
 
