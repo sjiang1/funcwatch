@@ -277,15 +277,15 @@ void funcwatch_get_params(funcwatch_run *run, int is_return) {
       if(flags & FW_INVALID)
 	p->flags |= FW_INVALID;
       else {
-	if(p->flags & FW_POINTER &&
-	   (p->flags & FW_INT || p->flags & FW_CHAR || p->flags & FW_FLOAT))
-	  resolve_pointer(run, p);
-	else if(p->flags & FW_ENUM)
+	if(p->flags & FW_ENUM)
 	  resolve_enum(run, p);
 	else if(p->flags & FW_UNION)
 	  resolve_struct(run, p, 0);
 	else if(p->flags &FW_STRUCT)
 	  resolve_struct(run, p, 1);
+	else if(p->flags & FW_POINTER &&
+	   (p->flags & FW_INT || p->flags & FW_CHAR || p->flags & FW_FLOAT))
+	  resolve_pointer(run, p);
       }
     }
     
@@ -803,7 +803,7 @@ static void get_type_info_from_var_die(Dwarf_Debug dbg, Dwarf_Die var_die, funcw
 }
 
 /*
- * for int* char* pointers, this function allocate a local memory block, and transfer the data from 
+ * for int*, char* pointers, this function allocate a local memory block, and transfer the data from 
  * the remote process (target function) to the local memory block.
  * the pointer's value is the address of the local memory block.
  */
@@ -923,9 +923,7 @@ static void resolve_struct(funcwatch_run *run, funcwatch_param *p, int is_resolv
   Dwarf_Die child_die;
   Dwarf_Error err;
   int rc = 0;
-  if(p->flags & FW_STRUCT)
-    rc=dwarf_child(p->type_die, &child_die, &err); // child_die is a tag_member
-  else if(p->flags & FW_UNION)
+  if((p->flags & FW_STRUCT) || (p->flags & FW_UNION))
     rc=dwarf_child(p->type_die, &child_die, &err); // child_die is a tag_member
   else
     debug_printf("Error: %s\n", "resolve_struct only deals with struct or union variables.");
@@ -996,7 +994,7 @@ static void resolve_struct(funcwatch_run *run, funcwatch_param *p, int is_resolv
       if(tmp->flags & FW_STRUCT && !(tmp->flags & FW_POINTER))
 	tmp->value = tmp->addr;
       else if(tmp->flags & FW_UNION && !(tmp->flags & FW_POINTER))
-	tmp->value = tmp->addr;
+	tmp->value = 0; // temporary solution for pointers in union type
       else
 	get_value_from_remote_process(tmp, run->child_pid, tmp->addr);
       
