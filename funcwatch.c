@@ -998,7 +998,7 @@ static void resolve_struct(funcwatch_run *run, funcwatch_param *p, int is_resolv
       else
 	get_value_from_remote_process(tmp, run->child_pid, tmp->addr);
       
-      if(tmp->flags & FW_POINTER && is_resolve_pointer)
+      if(tmp->flags & FW_POINTER && (!is_resolve_pointer))
 	tmp->value = 0;
 
       //debug_printf("var_name: %s\n", var_name);
