@@ -994,7 +994,7 @@ static void resolve_struct(funcwatch_run *run, funcwatch_param *p, int is_resolv
       if(tmp->flags & FW_STRUCT && !(tmp->flags & FW_POINTER))
 	tmp->value = tmp->addr;
       else if(tmp->flags & FW_UNION && !(tmp->flags & FW_POINTER))
-	tmp->value = 0; // temporary solution for pointers in union type
+	tmp->value = tmp->addr; // if tmp is a union, we need the addr to resolve.
       else
 	get_value_from_remote_process(tmp, run->child_pid, tmp->addr);
       
