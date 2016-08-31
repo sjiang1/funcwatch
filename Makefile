@@ -1,7 +1,8 @@
 #Funcwatch Makefile
 #This variable specifies the architecture
 #Supported values are x86.
-arch = x86
+bits := $(shell getconf LONG_BIT)
+arch := x86_$(bits)
 arch_dir = ./arch/$(arch)
 include $(arch_dir)/arch.mk
 arch_srcfiles := $(foreach file, $(arch_srcfiles), $(arch_dir)/$(file))
