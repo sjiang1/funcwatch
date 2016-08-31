@@ -34,6 +34,10 @@
 *.dSYM/
 *.su
 
+# 3-party library source
+libs_src/libcsv-3.0.3/*
+libs_src/libcsv-3.0.3/configure
+
 # Binary files
 *~
 FuncwatchResults/
