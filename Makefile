@@ -27,7 +27,7 @@ clean:
 		tests/test_union_0 tests/test_union_1 \
 		`find -name \*.o` 
 
-funcwatch: main.o funcwatch.o expression_stack.o $(arch_srcfiles) 
+funcwatch: main.o funcwatch.o expression_stack.o util.o commandhandle.o $(arch_srcfiles) 
 
 tests/test: 					tests/test.o
 tests/test_struct_0: 				tests/test_struct_0.o
