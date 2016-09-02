@@ -255,7 +255,7 @@ int evaluate_address(funcwatch_run *run, Dwarf_Die *die, Dwarf_Half tag, Dwarf_U
   memset(registers, 0, sizeof(user_regs_struct));
   long rc = ptrace(PTRACE_GETREGS, run->child_pid, 0, registers);
   if(rc != 0) {
-    debug_printf("Unable to get  registers for setting function parameter in pid: %d: %s\n", run->child_pid, strerror(errno));
+    debug_printf("Unable to get registers for setting function parameter in pid: %d: %s\n", run->child_pid, strerror(errno));
     exit(-1);
   }
   
