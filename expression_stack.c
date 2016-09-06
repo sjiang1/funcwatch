@@ -258,6 +258,9 @@ int evaluate_address(funcwatch_run *run, Dwarf_Die *die, Dwarf_Half tag,
 		     Dwarf_Unsigned fbreg, int *flags, Dwarf_Unsigned *ret_address) {
   user_regs_struct *registers = (user_regs_struct *) malloc(sizeof(user_regs_struct));
   memset(registers, 0, sizeof(user_regs_struct));
+
+  // this debug print is related to a mystery bug... do not remove it 
+  debug_printf("run->child_pid = %d\n", run->child_pid); 
   long rc = ptrace(PTRACE_GETREGS, run->child_pid, 0, registers);
   if(rc != 0) {
     debug_printf("Unable to get registers for setting function parameter in pid: %d: %s\n",
