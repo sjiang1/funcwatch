@@ -250,7 +250,8 @@ void parse_location(funcwatch_run *run, Dwarf_Loc* loc, expression_stack *stack,
  The tags that are known to be used in Funcwatch: DW_AT_location and DW_AT_data_member_location
  Return DW_DLV_OK if the address is retrived correctly.
  */
-int evaluate_address(funcwatch_run *run, Dwarf_Die *die, Dwarf_Half tag, Dwarf_Unsigned fbreg, int *flags, Dwarf_Unsigned *ret_address) {
+int evaluate_address(funcwatch_run *run, Dwarf_Die *die, Dwarf_Half tag,
+		     Dwarf_Unsigned fbreg, int *flags, Dwarf_Unsigned *ret_address) {
   user_regs_struct *registers = (user_regs_struct *) malloc(sizeof(user_regs_struct));
   memset(registers, 0, sizeof(user_regs_struct));
   long rc = ptrace(PTRACE_GETREGS, run->child_pid, 0, registers);
