@@ -195,7 +195,11 @@ void funcwatch_get_params(funcwatch_run *run, int is_return) {
   int flags = 0;
   Dwarf_Unsigned fbreg= 0;
   int eval_res = evaluate_address(run, &(run->function_die), DW_AT_frame_base, 0, &flags, &fbreg);
-
+  if (eval_res != DW_DLV_OK){
+    debug_printf("Did not get the address of the function successfully. Exit.%s", "\n");
+    exit(-1);
+  }
+  
   Dwarf_Die var_die;
   Dwarf_Error err = err;
   Dwarf_Half tag;
