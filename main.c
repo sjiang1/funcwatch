@@ -64,8 +64,10 @@ int main(int argc, char *argv[]) {
     return 0;
   }
    
-  if(DEBUG)
+  if(DEBUG){
     fprintf(stderr, "Total Call #%d\n", run->num_calls);
+    fprintf(stderr, "Total Rets #%d\n", run->num_rets);
+  }
   
   fprintf(f, "%s\n", "Is Return Flag, Function, Call Number, Variable Name, Variable Size, Usage Flags, Variable Type, Value ");
   for(int i = 0; i < run->num_calls; ++i)  {
