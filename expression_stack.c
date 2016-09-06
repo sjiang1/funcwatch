@@ -297,33 +297,11 @@ int evaluate_address(funcwatch_run *run, Dwarf_Die *die, Dwarf_Half tag,
       Dwarf_Loc loc = lbuf[i]->ld_s[j];
       parse_location(run, &loc, stack, internal_flags, registers, fbreg);
     }
-    //deallocate stuff piece by piece
-    //TODO: figure out why this started failing.
     dwarf_dealloc(run->dwarf_ptr, lbuf[i]->ld_s, DW_DLA_LOC_BLOCK);
     dwarf_dealloc(run->dwarf_ptr,lbuf[i], DW_DLA_LOCDESC);
   }
   dwarf_dealloc(run->dwarf_ptr, lbuf, DW_DLA_LIST);
 
-  /*Dwarf_Attribute const_attr;
-  ares = dwarf_attr(*die, DW_AT_const_value, &const_attr, &err);
-  if(ares != DW_DLV_OK) {
-    if(ares == DW_DLV_ERROR){
-      debug_printf("Error in getting attr: %s\n", dwarf_errmsg(&err));
-      return ares;
-    }
-    else if(ares == DW_DLV_NO_ENTRY){      
-      *ret_address = pop(stack);
-      *flags = pop(internal_flags);
-      free_stack(stack);
-      free_stack(internal_flags);
-      //debug_printf("Returning %x\n", ret);
-      return DW_DLV_OK;
-    }
-    else
-      debug_printf("Error: Do not have location attribute.%s\n", " ");
-    return ares;
-  }
-  */
   int flag = pop(internal_flags);
   Dwarf_Unsigned address = pop(stack);
   
@@ -339,7 +317,6 @@ int evaluate_address(funcwatch_run *run, Dwarf_Die *die, Dwarf_Half tag,
   *flags = flag;
   free_stack(stack);
   free_stack(internal_flags);
-  //debug_printf("Returning %x\n", ret);
   return DW_DLV_OK;
 }
 
