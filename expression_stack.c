@@ -244,11 +244,15 @@ void parse_location(funcwatch_run *run, Dwarf_Loc* loc, expression_stack *stack,
 
 /*
  Evalute the address of a die, depending on the given tag.
+
  Possible tag input may be: DW_AT_segment, DW_AT_return_addr, DW_AT_frame_base, DW_AT_static_link,
   DW_AT_data_member_location, DW_AT_string_length, DW_AT_location, DW_AT_use_location,
-  DW_AT_vtable_elem_location,
- The tags that are known to be used in Funcwatch: DW_AT_location and DW_AT_data_member_location
+  DW_AT_vtable_elem_location
+
+ The tags that are known to be used in Funcwatch: DW_AT_location, DW_AT_data_member_location, DW_AT_frame_base
+
  Return DW_DLV_OK if the address is retrived correctly.
+
  */
 int evaluate_address(funcwatch_run *run, Dwarf_Die *die, Dwarf_Half tag,
 		     Dwarf_Unsigned fbreg, int *flags, Dwarf_Unsigned *ret_address) {
@@ -256,15 +260,17 @@ int evaluate_address(funcwatch_run *run, Dwarf_Die *die, Dwarf_Half tag,
   memset(registers, 0, sizeof(user_regs_struct));
   long rc = ptrace(PTRACE_GETREGS, run->child_pid, 0, registers);
   if(rc != 0) {
-    debug_printf("Unable to get registers for setting function parameter in pid: %d: %s\n", run->child_pid, strerror(errno));
+    debug_printf("Unable to get registers for setting function parameter in pid: %d: %s\n",
+		 run->child_pid, strerror(errno));
     exit(-1);
   }
   
   Dwarf_Error err;
   Dwarf_Attribute attr;
   Dwarf_Half var_tag;
-  if (dwarf_tag(*die, &var_tag, &err) != DW_DLV_OK)
-    return;
+  int tres = dwarf_tag(*die, &var_tag, &err);
+  if ( tres != DW_DLV_OK)
+    return tres;
 
   int ares = dwarf_attr(*die, tag, &attr, &err);
   if( ares != DW_DLV_OK) {
