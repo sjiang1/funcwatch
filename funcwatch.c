@@ -189,7 +189,7 @@ funcwatch_param *get_end_of_list(funcwatch_param *param){
 
 void funcwatch_get_params(funcwatch_run *run, int is_return) {
   int n_params = 0;
-  funcwatch_param * return_params = NULL;
+  funcwatch_param * params_to_get = NULL;
   long rc = 0;
   errno = 0;
   int flags = 0;
@@ -213,11 +213,11 @@ void funcwatch_get_params(funcwatch_run *run, int is_return) {
       }
       
       ++ n_params;
-      funcwatch_param *p = return_params;
-      if(return_params == NULL) {
-	return_params = (funcwatch_param *) malloc(sizeof(funcwatch_param));
-	return_params->next = NULL;
-	p = return_params;
+      funcwatch_param *p = params_to_get;
+      if(params_to_get == NULL) {
+        params_to_get = (funcwatch_param *) malloc(sizeof(funcwatch_param));
+	params_to_get->next = NULL;
+	p = params_to_get;
       }
       else {
 	p = get_end_of_list(p);
@@ -295,10 +295,10 @@ void funcwatch_get_params(funcwatch_run *run, int is_return) {
   if(n_params > 0) {
     if(is_return == 0){
       run->params = realloc(run->params, run->num_calls*sizeof(void *));
-      run->params[run->num_calls-1] = return_params;
+      run->params[run->num_calls-1] = params_to_get;
     }else if(is_return == 1){
       run->ret_params = realloc(run->ret_params, run->num_calls*sizeof(void *));
-      run->ret_params[run->num_calls-1] = return_params;
+      run->ret_params[run->num_calls-1] = params_to_get;
     }
   }
 }
