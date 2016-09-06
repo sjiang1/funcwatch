@@ -7,6 +7,9 @@
 #include <dwarf.h>
 #include <sys/types.h>
 #include <sys/user.h>
+
+#include "util.h"
+
 typedef struct user_regs_struct user_regs_struct;
 typedef struct user_fpregs_struct user_fpregs_struct;
 #define MAX_RESOLVE_DEPTH 10
@@ -46,7 +49,10 @@ typedef struct {
   funcwatch_param **params;
   funcwatch_param **ret_params;
   funcwatch_param *return_values;
-  int num_calls;
+  int num_calls; // every time the num_calls increases, there will be new params added to params
+  int num_rets;  // the number of calls that have been returned. every time the num_rets increases, there should be new returns added to ret_params and return_values
+  Vector call_stack; // the call stack for the function calls. used for recursive ones to identify each different call
+  
   int num_params;
   int fd; // file descriptor for the scene. Passed to libdwarf and any other libraries that need to read it.
   int mem_fd; //file descriptor for reading and writing process memory

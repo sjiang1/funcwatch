@@ -22,6 +22,8 @@
 #include <debug_printf.h>
 #include "funcwatch.h"
 #include "arch.h"
+#include "util.h"
+
 //static utility function definitions
 static void get_type_info_from_var_die(Dwarf_Debug dbg, Dwarf_Die var_die, funcwatch_param *p);
 static void get_type_info_from_type_die(Dwarf_Debug dbg, Dwarf_Die type_die, funcwatch_param *p);
@@ -231,7 +233,12 @@ void funcwatch_get_params(funcwatch_run *run, int is_return) {
       }
       p->name = var_name;
       p->func_name = run->func_name;
-      p->call_num = run->num_calls-1;
+      if(is_return){
+	p->call_num = *(int *)vector_last(&(run->call_stack));
+      }else{
+	p->call_num = run->num_calls-1;
+      }
+
       p->struct_level = 0;
       p->var_die = var_die;
       p->next = NULL;
@@ -301,8 +308,8 @@ void funcwatch_get_params(funcwatch_run *run, int is_return) {
       run->params = realloc(run->params, run->num_calls*sizeof(void *));
       run->params[run->num_calls-1] = params_to_get;
     }else if(is_return == 1){
-      run->ret_params = realloc(run->ret_params, run->num_calls*sizeof(void *));
-      run->ret_params[run->num_calls-1] = params_to_get;
+      run->ret_params = realloc(run->ret_params, run->num_rets*sizeof(void *));
+      run->ret_params[run->num_rets-1] = params_to_get;
     }
   }
 }
@@ -311,6 +318,8 @@ funcwatch_run *funcwatch_run_program(char *prog_name,  char *func_name, char **a
 {
   funcwatch_run *run = malloc(sizeof(funcwatch_run));
   run->num_calls = 0;
+  run->num_rets = 0;
+  vector_init(&(run->call_stack));
   run->prog_name = prog_name;
   run->func_name = func_name;
   Dwarf_Error err;
@@ -504,17 +513,27 @@ funcwatch_run *funcwatch_run_program(char *prog_name,  char *func_name, char **a
 		//rc = ptrace(PTRACE_GETREGS, run->child_pid, 0, &registers);
 		if(get_instruction_pointer(&registers) == address) {
 		  ++run->num_calls;
+		  int *call_id = (int *)malloc(sizeof(int));
+		  *call_id = run->num_calls - 1;
+		  vector_append(&(run->call_stack), call_id);
 		  funcwatch_get_params(run,0);
 		}
 		else { // get the return value for this run
+		  ++run->num_rets;
+		  funcwatch_get_params(run, 1); // this cannot be moved to after getting the return value
+		                                // in getting the return values,
+		                                // we removed the last call_id in the run->call_stack
+
 		  Dwarf_Bool b;
 		  dwarf_hasattr(run->function_die, DW_AT_type, &b, &err);
 		  if(b) {
-		    run->return_values = realloc(run->return_values, sizeof(funcwatch_param)*run->num_calls);
-		    funcwatch_param *r = run->return_values+run->num_calls-1;
+		    run->return_values = realloc(run->return_values, sizeof(funcwatch_param)*run->num_rets);
+		    funcwatch_param *r = run->return_values+run->num_rets-1;
 		    r->name = "$return_value";
 		    r->func_name = run->func_name;
-		    r->call_num = run->num_calls-1;
+		    int *call_id = vector_remove_last(&(run->call_stack));
+		    r->call_num = *call_id;
+		    free(call_id);
 		    r->next = 0;
 		    r->struct_level = 0;
 		    get_type_info_from_var_die(run->dwarf_ptr, run->function_die, r);
@@ -543,7 +562,6 @@ funcwatch_run *funcwatch_run_program(char *prog_name,  char *func_name, char **a
 			resolve_struct(run, r,1);
 		    }
 		  }
-		  funcwatch_get_params(run, 1);
 		}
 		
 		rc = ptrace(PTRACE_SINGLESTEP, run->child_pid, 0, 0);
