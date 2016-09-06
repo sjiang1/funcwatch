@@ -188,18 +188,10 @@ funcwatch_param *get_end_of_list(funcwatch_param *param){
 }
 
 void funcwatch_get_params(funcwatch_run *run, int is_return) {
-  // user_regs_struct *registers = (user_regs_struct *) malloc(sizeof(user_regs_struct));
-
   int n_params = 0;
   funcwatch_param * return_params = NULL;
   long rc = 0;
-  // memset(registers, 0, sizeof(user_regs_struct));
   errno = 0;
-  // rc = ptrace(PTRACE_GETREGS, run->child_pid, 0, registers);
-  //if(rc != 0) {
-  //  debug_printf("Unable to get  registers for setting function parameter in pid: %d: %s\n", run->child_pid, strerror(errno));
-  //  exit(-1);
-  //}
   int flags = 0;
   Dwarf_Unsigned fbreg= 0;
   int eval_res = evaluate_address(run, &(run->function_die), DW_AT_frame_base, 0, &flags, &fbreg);
@@ -239,7 +231,6 @@ void funcwatch_get_params(funcwatch_run *run, int is_return) {
       p->struct_level = 0;
       p->var_die = var_die;
       p->next = NULL;
-      // set p->type, p->size, p->type_die
       get_type_info_from_var_die(run->dwarf_ptr, var_die, p);
 
       if(p->size > 0 && p->size < 4 && !(p->flags & FW_POINTER)){
@@ -273,7 +264,6 @@ void funcwatch_get_params(funcwatch_run *run, int is_return) {
 	}
       }
       
-      //debug_printf("value is %ld\n", val);
       if(flags & FW_INVALID)
 	p->flags |= FW_INVALID;
       else {
