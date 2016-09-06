@@ -2,7 +2,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include "commandhandle.h"
 #include "funcwatch.h"
+#include "util.h"
 
 #define DEBUG 0
 
@@ -12,10 +14,39 @@ static void print_outfile_name(char *outfile, int argc, char *argv[]);
 
 int main(int argc, char *argv[]) {
   if(argc < 3) { 
-    printf("%s", "Usage: funcwatch <function name> <program name> [program arguments]\n");
+    fprintf(stderr, "Usage 1: logging only one function's I/O values. Input the name of the program that to be logged.\n");
+    fprintf(stderr, "         funcwatch <function name> <program name> [program arguments]\n");
+    fprintf(stderr, "         e.g. \n");
+    fprintf(stderr, "         ./funcwatch foo tests/test_pointer_0_int\n");
+    fprintf(stderr, "Usage 2: logging multiple functions' I/O values. Input a file that contains the functions' names.\n");
+    fprintf(stderr, "         funcwatch :<functionnamelistfile> <program name> [program arguments]\n");
+    fprintf(stderr, "         e.g. \n");
+    fprintf(stderr, "         ./funcwatch :example_funcnames.txt tests/test_pointer_0_int\n");
     return 0;
   }
 
+  Vector target_functions;
+  vector_init(&target_functions);
+  if(argv[1][0] == ':'){
+    printf("Multi-functions logging from %s \n", argv[1]);
+    read_functionnames(&target_functions, (argv[1]+1)); // malloced inside read_functionnames
+    // (argv[1] + 1) skipping the ':' ahead of the filename
+    return; //not ready for using the multi-functions logging.
+  }else{
+    printf("Logging one function: %s\n", argv[1]);
+    size_t funcname_len = strlen(argv[1]);
+    char *data_to_save = (char *)malloc(sizeof(char) *(funcname_len + 1));
+    strncpy(data_to_save, argv[1], funcname_len + 1);
+    vector_append(&target_functions, data_to_save);
+  } // target_functions should be freed in the end of the main function
+
+  /*
+  for (int i = 0; i < target_functions.size; i++){
+    char *funcname = vector_get(&target_functions, i);
+    fprintf(stderr, "Get function name: %s\n", funcname);
+  }
+  */
+  
   // there is something that makes memory not safe to call fopen after we get funcwatch_run
   funcwatch_run *run = funcwatch_run_program(argv[2], argv[1], &argv[2]);
   if(run == 0)
@@ -87,6 +118,7 @@ int main(int argc, char *argv[]) {
   }
 
   fclose(f);
+  vector_inner_free(&target_functions);
   //dwarf_finish, dwarf_init should be here.
   return 0;
 }

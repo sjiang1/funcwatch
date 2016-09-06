@@ -470,7 +470,7 @@ funcwatch_run *funcwatch_run_program(char *prog_name,  char *func_name, char **a
 	      riovec.iov_base = (void *) address;
 	      riovec.iov_len = sz;
 	      rc = process_vm_readv(run->child_pid, &liovec, 1, &riovec, 1, 0);
-	      if(rc		    			        != sz) {
+	      if(rc!= sz) {
 		debug_printf("read error: %s\n", strerror(errno));
 		exit(-1);
 	      }
