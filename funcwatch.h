@@ -10,8 +10,11 @@
 
 #include "util.h"
 
+#define DEBUG 0
+
 typedef struct user_regs_struct user_regs_struct;
 typedef struct user_fpregs_struct user_fpregs_struct;
+
 #define MAX_RESOLVE_DEPTH 10
 
 typedef struct {
