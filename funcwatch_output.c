@@ -43,7 +43,7 @@ void output_logged_values(FILE *f, funcwatch_run *run){
       fprintf(stderr, "Warning: function %s does not have return value.\n", run->func_name);
     }
     else{
-      funcwatch_param *p = get_return_from_call_id(curr_call_id);
+      funcwatch_param *p = get_return_from_call_id(run, curr_call_id);
       if(DEBUG)
 	fprintf(stderr, "print return: %s\n", p->name);
       print_param(f, p, 1);
@@ -74,7 +74,7 @@ void output_logged_values(FILE *f, funcwatch_run *run){
 }
 
 static funcwatch_param *get_return_from_call_id(funcwatch_run *run, int call_id){
-  return &(run->return_values[i]);
+  return &(run->return_values[call_id]);
 }
 
 static void print_param(FILE *f, funcwatch_param *p, int is_return) {
