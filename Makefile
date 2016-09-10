@@ -14,7 +14,7 @@ LDLIBS = -ldwarf -lelf $(arch_LDLIBS) -lcsv -lz
 all: funcwatch tests/test \
      tests/test_struct_0 tests/test_struct_1_pointer_member tests/test_struct_2_struct_pointer_member \
      tests/test_primitive_0_int tests/test_primitive_1_char tests/test_primitive_2_uchar tests/test_primitive_3_short \
-     tests/test_multiple_parameters_0 \
+     tests/test_multiple_parameters_0 tests/test_multiple_parameters_1 \
      tests/test_pointer_0_int tests/test_pointer_1_char tests/test_pointer_2_struct0 tests/test_pointer_3_struct1 \
      tests/test_union_0 tests/test_union_1 \
      tests/test_recursive_0
@@ -23,7 +23,7 @@ clean:
 	rm -f funcwatch tests/test \
 		tests/test_struct_0 tests/test_struct_1_pointer_member tests/test_struct_2_struct_pointer_member \
 		tests/test_primitive_0_int tests/test_primitive_1_char tests/test_primitive_2_uchar tests/test_primitive_3_short \
-		tests/test_multiple_parameters_0 \
+		tests/test_multiple_parameters_0 tests/test_multiple_parameters_1 \
 		tests/test_pointer_0_int tests/test_pointer_1_char tests/test_pointer_2_struct0 tests/test_pointer_3_struct1 \
 		tests/test_union_0 tests/test_union_1 \
                 tests/test_recursive_0 \
@@ -40,6 +40,7 @@ tests/test_primitive_1_char: 			tests/test_primitive_1_char.o
 tests/test_primitive_2_uchar: 			tests/test_primitive_2_uchar.o
 tests/test_primitive_3_short: 			tests/test_primitive_3_short.o
 tests/test_multiple_parameters_0: 		tests/test_multiple_parameters_0.o
+tests/test_multiple_parameters_1:               tests/test_multiple_parameters_1.o
 tests/test_pointer_0_int: 			tests/test_pointer_0_int.o
 tests/test_pointer_1_char: 			tests/test_pointer_1_char.o
 tests/test_pointer_2_struct0: 			tests/test_pointer_2_struct0.o

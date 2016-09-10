@@ -44,6 +44,7 @@ FuncwatchResults/
 funcwatch
 tests/test
 tests/test_multiple_parameters_0
+tests/test_multiple_parameters_1
 tests/test_pointer_0_int
 tests/test_pointer_1_char
 tests/test_pointer_2_struct0

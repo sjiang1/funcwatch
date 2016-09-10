@@ -3,7 +3,8 @@
 #include "util.h"
 
 static void print_param(FILE *f, funcwatch_param *p, int is_return);
-static funcwatch_param *get_return_from_call_id(funcwatch_run *run, int curr_call_id);
+static funcwatch_param *get_variable_of_call_id(void *variables, int variables_length, int call_id, int ref);
+static void print_param_list(FILE *f, funcwatch_param *p, int is_return);
 
 void output_logged_values(FILE *f, funcwatch_run *run){
   if(DEBUG){
@@ -24,57 +25,67 @@ void output_logged_values(FILE *f, funcwatch_run *run){
     if(DEBUG)
       fprintf(stderr, "Call #%d\n", i);
     
-    // print input values
-    if(run->params == 0){
-      fprintf(stderr, "Warning: function %s does not have parameters.\n", run->func_name);
-    }else{
-      funcwatch_param *p = run->params[i];
-      while(p != NULL) {
-	if(DEBUG)
-	  fprintf(stderr, "print param: %s\n", p->name);
-	
-	print_param(f, p, 0);
-	p = p->next;
+    int hasParams = 1;
+    if(run->params == 0 || run->ret_params == 0){
+      fprintf(stderr, "function %s does not have parameters.\n", run->func_name);
+      if(run->params != 0 || run->ret_params != 0){
+	fprintf(stderr, "Warning: function %s does not have parameters, but have params or ret_params set.\n",
+		run->func_name);
       }
+      hasParams = 0;
     }
     
-    // print return
+    int hasReturn = 1;
     if(run->return_values == NULL) {
-      fprintf(stderr, "Warning: function %s does not have return value.\n", run->func_name);
-    }
-    else{
-      funcwatch_param *p = get_return_from_call_id(run, curr_call_id);
-      if(DEBUG)
-	fprintf(stderr, "print return: %s\n", p->name);
-      print_param(f, p, 1);
-      
-      while(p->next != NULL) {
-	p = p->next;
-	if(DEBUG)
-	  fprintf(stderr, "print param: %s\n", p->name);
-
-	print_param(f, p, 1);
-      }
+      fprintf(stderr, "function %s does not have return value.\n", run->func_name);
+      hasReturn = 0;
     }
     
-    // print parameters values when function returns
-    if(run->ret_params != 0){
-      funcwatch_param *ret_p = run->ret_params[i];
-      while(ret_p != NULL) {
-	if(DEBUG)
-	  fprintf(stderr, "print param after run: %s\n", ret_p->name);
-
-	print_param(f, ret_p, 1);
-	ret_p = ret_p->next;
-      }
+    if(hasParams){
+      // print input values
+      funcwatch_param *p = run->params[curr_call_id];
+      print_param_list(f, p, 0);
+    }
+    
+    if(hasReturn){
+      // print return
+      funcwatch_param *r = get_variable_of_call_id(run->return_values, run->num_rets, curr_call_id, 0);
+      print_param_list(f, r, 1);
+    }
+    
+    if(hasParams){
+      // print parameters values when function returns
+      funcwatch_param *ret_p = get_variable_of_call_id(run->ret_params, run->num_rets, curr_call_id, 1);
+      print_param_list(f, ret_p, 1);
     }
   }
 
   return;
 }
 
-static funcwatch_param *get_return_from_call_id(funcwatch_run *run, int call_id){
-  return &(run->return_values[call_id]);
+static funcwatch_param *get_variable_of_call_id(void *variables, int variables_length, int call_id, int ref){
+  for(int i =0; i< variables_length; i++){
+    funcwatch_param *variable = NULL;
+    if(ref){
+      variable = ((funcwatch_param **)variables)[i];
+    }else{
+      variable = &(((funcwatch_param *)variables)[i]);
+    }
+    if(variable->call_num == call_id){
+      return variable;
+    }
+  }
+  return NULL;
+}
+
+static void print_param_list(FILE *f, funcwatch_param *p, int is_return){
+  while(p != NULL) {
+    if(DEBUG)
+      fprintf(stderr, "print param: %s\n", p->name);
+    
+    print_param(f, p, is_return);
+    p = p->next;
+  }
 }
 
 static void print_param(FILE *f, funcwatch_param *p, int is_return) {
