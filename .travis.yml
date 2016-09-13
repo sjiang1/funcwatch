@@ -1,6 +1,7 @@
 language: c
 script: make
 before_install:
-  - sudo rm -rf /var/lib/apt/lists/*
-  - sudo apt-get -qq update 
+  - sudo rm -fr /var/lib/apt/lists/*
+  - sudo apt-get clean 
+  - sudo apt-get update 
   - sudo apt-get install --fix-missing gcc-multilib
