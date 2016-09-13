@@ -2,4 +2,4 @@ language: c
 script: make
 before_install:
   - sudo apt-get -qq update 
-  - sudo apt-get install gcc-multilib
+  - sudo apt-get install --fix-missing gcc-multilib
