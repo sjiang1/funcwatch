@@ -2,7 +2,7 @@ language: c
 script: make
 compiler: gcc
 before_install:
-  - sudo find /var/lib/apt/lists -type f  |xargs rm -f >/dev/null
+  - sudo find /var/lib/apt/lists -type f  |sudo xargs rm -f >/dev/null
   - sudo apt-get clean
   - sudo apt-get update 
   - sudo dpkg --configure -a 
