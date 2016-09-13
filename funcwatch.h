@@ -78,7 +78,6 @@ void push(expression_stack *stack, Dwarf_Unsigned p);
 int evaluate_address(funcwatch_run *run, Dwarf_Die *die, Dwarf_Half tag, Dwarf_Unsigned fbreg, int *flags, Dwarf_Unsigned *ret_address);
 
 funcwatch_run *funcwatch_run_program(char *prog_name,  char *func_name, char **argv);
-void funcwatch_get_params(funcwatch_run *run, int is_return);
 
 #define FW_INT 0x01
 #define FW_CHAR 0x02

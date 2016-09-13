@@ -24,6 +24,8 @@
 #include "arch.h"
 #include "util.h"
 
+void funcwatch_get_params(funcwatch_run *run);
+
 //static utility function definitions
 static void get_type_info_from_var_die(Dwarf_Debug dbg, Dwarf_Die var_die, funcwatch_param *p);
 static void get_type_info_from_type_die(Dwarf_Debug dbg, Dwarf_Die type_die, funcwatch_param *p);
@@ -189,7 +191,7 @@ funcwatch_param *get_end_of_list(funcwatch_param *param){
   return param;
 }
 
-void funcwatch_get_params(funcwatch_run *run, int is_return) {
+void funcwatch_get_params(funcwatch_run *run) {
   int n_params = 0;
   funcwatch_param * params_to_get = NULL;
   long rc = 0;
@@ -233,11 +235,7 @@ void funcwatch_get_params(funcwatch_run *run, int is_return) {
       }
       p->name = var_name;
       p->func_name = run->func_name;
-      if(is_return){
-	p->call_num = *(int *)vector_last(&(run->call_stack));
-      }else{
-	p->call_num = run->num_calls-1;
-      }
+      p->call_num = run->num_calls-1;
 
       p->struct_level = 0;
       p->var_die = var_die;
@@ -304,13 +302,70 @@ void funcwatch_get_params(funcwatch_run *run, int is_return) {
   }
 
   if(n_params > 0) {
-    if(is_return == 0){
-      run->params = realloc(run->params, run->num_calls*sizeof(void *));
-      run->params[run->num_calls-1] = params_to_get;
-    }else if(is_return == 1){
-      run->ret_params = realloc(run->ret_params, run->num_rets*sizeof(void *));
-      run->ret_params[run->num_rets-1] = params_to_get;
+    run->params = realloc(run->params, run->num_calls*sizeof(void *));
+    run->params[run->num_calls-1] = params_to_get;
+  }
+}
+
+void reevaluate_params(funcwatch_run *run){
+  // Get the call id
+  int call_id = *(int *)vector_last(&(run->call_stack));
+  int n_params = 0;
+  funcwatch_param * params_to_get = NULL;
+  // get the parameters by the call id
+  funcwatch_param * params_got = run->params[call_id]; 
+  funcwatch_param * param_got = params_got;
+  
+  while(param_got != NULL){
+    ++ n_params;
+
+    funcwatch_param *p = params_to_get;
+    if(params_to_get == NULL) {
+      params_to_get = (funcwatch_param *) malloc(sizeof(funcwatch_param));
+      params_to_get->next = NULL;
+      p = params_to_get;
     }
+    else {
+      p = get_end_of_list(p);
+      p->next = (funcwatch_param *) malloc(sizeof(funcwatch_param));
+      p = p->next;
+      p->next = NULL;
+    }
+    p->name = param_got->name;
+    p->func_name = run->func_name;
+    p->call_num = call_id;
+    
+    p->struct_level = 0;
+    p->var_die = param_got->var_die;
+    p->next = NULL;
+    p->type_die = param_got->type_die;
+    p->flags = param_got->flags;
+    p->type = param_got->type;
+    p->size = param_got->size;
+
+    p->value = param_got->value;
+    p->addr = param_got->addr;
+    
+    if( !(p->flags & FW_INVALID) ){
+      if(p->flags & FW_ENUM)
+	resolve_enum(run, p);
+      else if(p->flags & FW_UNION)
+	resolve_struct(run, p, 0);
+      else if(p->flags &FW_STRUCT)
+	resolve_struct(run, p, 1);
+      else if(p->flags & FW_POINTER &&
+	      (p->flags & FW_INT || p->flags & FW_CHAR || p->flags & FW_FLOAT))
+	resolve_pointer(run, p);
+    }
+    
+    // go to next parameter
+    param_got = param_got->next;
+  }  
+  
+  // 
+  if(n_params > 0) {
+    run->ret_params = realloc(run->ret_params, run->num_rets*sizeof(void *));
+    run->ret_params[run->num_rets-1] = params_to_get;
   }
 }
 
@@ -516,13 +571,15 @@ funcwatch_run *funcwatch_run_program(char *prog_name,  char *func_name, char **a
 		  int *call_id = (int *)malloc(sizeof(int));
 		  *call_id = run->num_calls - 1;
 		  vector_append(&(run->call_stack), call_id);
-		  funcwatch_get_params(run,0);
+		  funcwatch_get_params(run);
 		}
 		else { // get the return value for this run
 		  ++run->num_rets;
-		  funcwatch_get_params(run, 1); // this cannot be moved to after getting the return value
-		                                // in getting the return values,
-		                                // we removed the last call_id in the run->call_stack
+		  
+		  // this cannot be moved to after getting the return value
+		  // in getting the return values,
+		  // we removed the last call_id in the run->call_stack
+		  reevaluate_params(run);
 
 		  Dwarf_Bool b;
 		  dwarf_hasattr(run->function_die, DW_AT_type, &b, &err);
