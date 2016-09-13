@@ -5,7 +5,8 @@ before_install:
   - sudo find /var/lib/apt/lists -type f  |sudo xargs rm -f >/dev/null
   - sudo apt-get clean
   - sudo apt-get update 
-  - sudo dpkg --configure -a 
+  - apt-get build-dep gcc-multilib
+  - sudo dpkg --configure -a
   - wget http://launchpadlibrarian.net/102057170/g++-4.6-multilib_4.6.3-1ubuntu5_amd64.deb
   - sudo dpkg -i g++-4.6-multilib_4.6.3-1ubuntu5_amd64.deb
   - sudo apt-get install --fix-missing gcc-multilib
