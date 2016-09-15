@@ -9,11 +9,6 @@
 #include <string.h>
 #include <limits.h>
 
-// String utility functions - declaration
-int ends_with(const char *str, const char *suffix);
-int starts_with(const char *str, const char *prefix);
-char *strcpy_deep(const char *str);
-
 // Dynamic Array utility functions - declaration
 #define VECTOR_INITIAL_CAPACITY 100
 typedef struct {

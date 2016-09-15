@@ -13,6 +13,7 @@
 
 // headers for our own code
 #include "vector.h"
+#include "stringutil.h"
 #include "parameter.h"
 
 // process the results for one function
