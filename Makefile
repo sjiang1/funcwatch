@@ -29,7 +29,7 @@ clean:
                 tests/test_recursive_0 \
 		`find -name \*.o` 
 
-funcwatch: main.o funcwatch.o funcwatch_output.o expression_stack.o vector.o stringutil.o commandhandle.o $(arch_srcfiles) 
+funcwatch: main.o funcwatch.o funcwatch_param_util.o dwarf_util.o funcwatch_output.o expression_stack.o vector.o stringutil.o commandhandle.o $(arch_srcfiles) 
 
 tests/test: 					tests/test.o
 tests/test_struct_0: 				tests/test_struct_0.o
