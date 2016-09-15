@@ -16,6 +16,7 @@ all: funcwatch tests/test \
      tests/test_primitive_0_int tests/test_primitive_1_char tests/test_primitive_2_uchar tests/test_primitive_3_short \
      tests/test_multiple_parameters_0 tests/test_multiple_parameters_1 \
      tests/test_pointer_0_int tests/test_pointer_1_char tests/test_pointer_2_struct0 tests/test_pointer_3_struct1 \
+     tests/test_pointer_4_pointer0 \
      tests/test_union_0 tests/test_union_1 \
      tests/test_recursive_0
 
@@ -25,6 +26,7 @@ clean:
 		tests/test_primitive_0_int tests/test_primitive_1_char tests/test_primitive_2_uchar tests/test_primitive_3_short \
 		tests/test_multiple_parameters_0 tests/test_multiple_parameters_1 \
 		tests/test_pointer_0_int tests/test_pointer_1_char tests/test_pointer_2_struct0 tests/test_pointer_3_struct1 \
+                tests/test_pointer_4_pointer0 \
 		tests/test_union_0 tests/test_union_1 \
                 tests/test_recursive_0 \
 		`find -name \*.o` 
@@ -45,6 +47,7 @@ tests/test_pointer_0_int: 			tests/test_pointer_0_int.o
 tests/test_pointer_1_char: 			tests/test_pointer_1_char.o
 tests/test_pointer_2_struct0: 			tests/test_pointer_2_struct0.o
 tests/test_pointer_3_struct1: 			tests/test_pointer_3_struct1.o
+tests/test_pointer_4_pointer0:                  tests/test_pointer_4_pointer0.o
 tests/test_union_0: 				tests/test_union_0.o
 tests/test_union_1: 				tests/test_union_1.o
 tests/test_recursive_0:                         tests/test_recursive_0.o
