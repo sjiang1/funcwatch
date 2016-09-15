@@ -5,7 +5,7 @@
 #include "commandhandle.h"
 #include "funcwatch.h"
 #include "funcwatch_output.h"
-#include "util.h"
+#include "vector.h"
 
 const char *result_folder = "./FuncwatchResults";
 static void print_outfile_name(char *outfile, int argc, char *argv[]);

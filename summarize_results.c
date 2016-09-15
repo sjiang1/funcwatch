@@ -12,7 +12,7 @@
 #include "csv.h"
 
 // headers for our own code
-#include "util.h"
+#include "vector.h"
 #include "parameter.h"
 
 // process the results for one function

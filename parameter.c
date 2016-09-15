@@ -3,7 +3,7 @@
 #include <string.h>
 
 #include "parameter.h"
-#include "util.h"
+#include "vector.h"
 
 
 // functions - value

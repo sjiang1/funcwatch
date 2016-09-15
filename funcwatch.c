@@ -20,9 +20,10 @@
 #include <libdwarf.h>
 #include <udis86.h>
 #include <debug_printf.h>
-#include "funcwatch.h"
 #include "arch.h"
-#include "util.h"
+
+#include "funcwatch.h"
+#include "vector.h"
 
 void funcwatch_get_params(funcwatch_run *run);
 
