@@ -1,5 +1,5 @@
-#ifndef _UTIL_H
-#define _UTIL_H
+#ifndef _VECTOR_H
+#define _VECTOR_H
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -27,4 +27,4 @@ void vector_set(Vector *vector, int index, void *data_ptr);
 void vector_double_capacity_if_full(Vector *vector);
 void vector_inner_free(Vector *vector);
 
-#endif 
+#endif // _VECTOR_H
