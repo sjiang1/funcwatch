@@ -1,3 +1,7 @@
+#if __cplusplus
+extern "C" {
+#endif
+  
 #ifndef _DYNSTRING_H
 #define _DYNSTRING_H
 
@@ -23,3 +27,6 @@ void dynstring_double_capacity_if_full(DynString *dynString, int toAppend);
 void dynstring_inner_free(DynString dynString);
 
 #endif // _DYNSTRING_H
+#if __cplusplus
+}
+#endif

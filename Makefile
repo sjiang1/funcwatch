@@ -54,3 +54,14 @@ tests/test_recursive_0:                         tests/test_recursive_0.o
 
 #summarize_results:summarize_results.o vector.o  stringutil.o parameter.o
 
+CXX = g++ 
+CPPFLAGS = -isystem ./includes
+CXXFLAGS = -std=gnu99 -g -I./includes $(arch_CFLAGS) -w -O0 -Wall
+
+unittests: dynstring_unittests
+
+dynstring_unittests.o: unittests/dynstring_unittests.cc \
+                       dynstring.h includes/gtest/*.h includes/gtest/internal/*.h
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c unittests/dynstring_unittests.cc
+dynstring_unittests: dynstring.o dynstring_unittests.o $(arch_dir)/lib/gtest_main.a
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -lpthread $^ -o $@
