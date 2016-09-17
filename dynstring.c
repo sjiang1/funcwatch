@@ -10,11 +10,11 @@
 
 void dynstring_init(DynString *dynString){
   // initialize size and capacity
-  dynString->size = 0;
   dynString->capacity = STRING_INITIAL_CAPACITY;
   // allocate memory for dynString->text
   dynString->text = malloc(sizeof(char) * dynString->capacity);
   (dynString->text)[0] = '\0';
+  dynString->size = strlen(dynString->text) + 1;
 }
 
 void dynstring_append(DynString *dynString, char *str){
@@ -22,6 +22,7 @@ void dynstring_append(DynString *dynString, char *str){
   dynstring_double_capacity_if_full(dynString, strlen(str) + 1);
   // append the text
   strcat(dynString->text,str);
+  dynString->size = strlen(dynString->text) + 1;
 }
 
 void dynstring_double_capacity_if_full(DynString *dynString, int toAppend){
