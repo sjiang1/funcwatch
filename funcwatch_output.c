@@ -1,10 +1,7 @@
 #include "funcwatch.h"
 #include "funcwatch_output.h"
 #include "vector.h"
-
-static void print_param(FILE *f, funcwatch_param *p, int is_return);
-static funcwatch_param *get_variable_of_call_id(void *variables, int variables_length, int call_id, int ref);
-static void print_param_list(FILE *f, funcwatch_param *p, int is_return);
+#include "dynstring.h"
 
 void output_logged_values(FILE *f, funcwatch_run *run){
   if(DEBUG){
