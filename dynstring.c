@@ -26,7 +26,7 @@ void dynstring_append(DynString *dynString, char *str){
 }
 
 void dynstring_double_capacity_if_full(DynString *dynString, int toAppend){
-  if (dynString->size + toAppend >= dynString->capacity) {
+  while (dynString->size + toAppend >= dynString->capacity) {
     // double vector->capacity and resize the allocated memory accordingly
     dynString->capacity *= 2;
     dynString->text = realloc(dynString->text, sizeof(char) * dynString->capacity);
