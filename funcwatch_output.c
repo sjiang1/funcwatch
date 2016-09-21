@@ -40,34 +40,43 @@ void output_logged_values(FILE *f, funcwatch_run *run){
     
     if(hasParams){
       // print input values
-      funcwatch_param *p = run->params[curr_call_id];
-      print_param_list(f, p, 0);
+      Vector callparams = run->params[curr_call_id];
+      DynString str = print_param_vector(callparams);
     }
     
     if(hasReturn){
       // print return
-      funcwatch_param *r = get_variable_of_call_id(run->return_values, run->num_rets, curr_call_id, 0);
-      print_param_list(f, r, 1);
+      funcwatch_param *r = get_return_of_call_id(run->return_values, run->num_rets, curr_call_id, 0);
+      DynString str = print_param_list(r);
     }
     
     if(hasParams){
       // print parameters values when function returns
-      funcwatch_param *ret_p = get_variable_of_call_id(run->ret_params, run->num_rets, curr_call_id, 1);
-      print_param_list(f, ret_p, 1);
+      Vector *ret_p = get_param_of_call_id(run->ret_params, run->num_rets, curr_call_id, 1);
+      DynString str = print_param_vector(*ret_p);
     }
   }
 
   return;
 }
 
-static funcwatch_param *get_variable_of_call_id(void *variables, int variables_length, int call_id, int ref){
+static Vector *get_param_of_call_id(Vector *variables, int variables_length, int call_id, int ref){
   for(int i =0; i< variables_length; i++){
-    funcwatch_param *variable = NULL;
-    if(ref){
-      variable = ((funcwatch_param **)variables)[i];
-    }else{
-      variable = &(((funcwatch_param *)variables)[i]);
+    Vector *vector = variables + i;
+    if(vector->size > 0){
+      funcwatch_param *variable = vector_get(vector, 0);
+      if(variable->call_num == call_id){
+	return vector;
+      }
     }
+  }
+  return NULL;
+}
+
+static funcwatch_param *get_return_of_call_id(funcwatch_param *variables, int variables_length, int call_id, int ref){
+  for(int i =0; i< variables_length; i++){
+    funcwatch_param *variable = variables + i;
+    
     if(variable->call_num == call_id){
       return variable;
     }
@@ -75,52 +84,74 @@ static funcwatch_param *get_variable_of_call_id(void *variables, int variables_l
   return NULL;
 }
 
-static void print_param_list(FILE *f, funcwatch_param *p, int is_return){
-  while(p != NULL) {
-    if(DEBUG)
-      fprintf(stderr, "print param: %s\n", p->name);
-    
-    print_param(f, p, is_return);
-    p = p->next;
+static DynString print_param_vector(Vector params){
+  if(DEBUG)
+    fprintf(stderr, "print param vector\n");
+
+  for(int i =0; i<params.size; i++){
+    funcwatch_param *p = vector_get(&params, i);
+    DynString paramString = print_param(p, 0);
   }
+  DynString str;
+  dynstring_init(&str);
+  return str;
 }
 
-static void print_param(FILE *f, funcwatch_param *p, int is_return) {
+static DynString print_param_list(funcwatch_param *p){
+  while(p != NULL) {
+    if(DEBUG)
+      fprintf(stderr, "print param list, head: %s\n", p->name);
+    
+    DynString paramString = print_param(p, 1);
+    p = p->next;
+  }
+  DynString str;
+  dynstring_init(&str);
+  return str;
+}
+
+static DynString print_param(funcwatch_param *p, int is_return) {
+  char buffer [1024];
   // print is return, has sub-values, function name, call num, parameter name, parameter size, flags
-  fprintf(f, "%d, %s, %d, %s, %zu,", is_return, p->func_name, p->call_num, p->name, p->size);
-  fprintf(f, " 0x%x,", p->flags);
+  sprintf(buffer, "%d, %s, %d, %s, %zu,", is_return, p->func_name, p->call_num, p->name, p->size);
+  sprintf(buffer, " 0x%x,", p->flags);
+  // fprintf(f, "%d, %s, %d, %s, %zu,", is_return, p->func_name, p->call_num, p->name, p->size);
+  // fprintf(f, " 0x%x,", p->flags);
 
   if(p->type == 0) p->type = " ";
   // print parameter type
-  if(p->flags & FW_POINTER)
-    fprintf(f, "%s *,", p->type);
-  else
-    fprintf(f, "%s,", p->type);
+  if(p->flags & FW_POINTER){
+    // fprintf(f, "%s *,", p->type);
+    sprintf(buffer, "%s *,", p->type);
+  }
+  else{
+    sprintf(buffer, "%s,", p->type);
+  }
 
   // print parameter value
   if(strcmp(p->type, "unsupported")==0)
-    fprintf(f, "unsupported value\n");
+    sprintf(buffer, "unsupported value\n");
   else if(p->flags & FW_INVALID)
-    fprintf(f, "0\n");
+    sprintf(buffer, "0\n");
   else if(p->flags & FW_POINTER
 	  && p->value == 0)
-    fprintf(f, "%s\n", "NULL");
+    sprintf(buffer, "%s\n", "NULL");
   else if(p->flags & FW_INT) {
     if(p->flags & FW_SIGNED){
       if(p->flags & FW_POINTER)
-	fprintf(f, "%ld\n", *(long *)p->value);
+	sprintf(buffer, "%ld\n", *(long *)p->value);
       else
-	fprintf(f, "%ld\n", p->value);
+	sprintf(buffer, "%ld\n", p->value);
     }
     else{
       if(p->flags & FW_POINTER){
 	unsigned long *tmpptr = p->value;
 	unsigned long tmpvalue = *tmpptr;
-	fprintf(f, "%lu\n", tmpvalue);
+	sprintf(buffer, "%lu\n", tmpvalue);
       }else{
 	unsigned long *tmpptr = &(p->value);
 	unsigned long tmpvalue = *tmpptr;
-	fprintf(f, "%lu\n", tmpvalue);
+	sprintf(buffer, "%lu\n", tmpvalue);
       }
     }
   }else if(p->flags & FW_FLOAT) {
@@ -129,29 +160,29 @@ static void print_param(FILE *f, funcwatch_param *p, int is_return) {
       tmpptr = p->value;
     else
       tmpptr = &(p->value);
-    fprintf(f, "%f\n", *tmpptr);
+    sprintf(buffer, "%f\n", *tmpptr);
   }
   else if(p->flags & FW_ENUM)
-    fprintf(f, "%s\n", (char *) p->value);
+    sprintf(buffer, "%s\n", (char *) p->value);
   else if(p->flags &FW_CHAR) {
     if(p->flags &FW_POINTER)
-      fprintf(f, "\"%s\"\n", (char *) p->value);
+      sprintf(buffer, "\"%s\"\n", (char *) p->value);
     else if(p->flags &FW_SIGNED){
       char *tmpptr = (char *)&(p->value);
       char tmpvalue = *tmpptr;
-      fprintf(f, "%c\n", tmpvalue);
+      sprintf(buffer, "%c\n", tmpvalue);
     }
     else{
       unsigned char *tmpptr = (unsigned char *)&(p->value);
       unsigned char tmpvalue = *tmpptr;
-      fprintf(f, "%hhu\n", *tmpptr);
+      sprintf(buffer, "%hhu\n", *tmpptr);
     }
   }
   else if(p->flags & FW_STRUCT && p->flags & FW_POINTER)
-    fprintf(f, "%p\n", p->value);
+    sprintf(buffer, "%p\n", p->value);
   else if(p->flags & FW_STRUCT)
-    fprintf(f, "%p\n", p->addr);
+    sprintf(buffer, "%p\n", p->addr);
   else
-    fprintf(f, "0x%lx\n", p->value);
+    sprintf(buffer, "0x%lx\n", p->value);
 }
 

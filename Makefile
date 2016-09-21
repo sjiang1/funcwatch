@@ -58,10 +58,16 @@ CXX = g++
 CPPFLAGS = -isystem ./includes
 CXXFLAGS = -std=gnu99 -g -I./includes $(arch_CFLAGS) -w -O0 -Wall
 
-unittests: dynstring_unittests
+unittests: dynstring_unittests funcwatch_output_unittests
 
 dynstring_unittests.o: unittests/dynstring_unittests.cc \
                        dynstring.h includes/gtest/*.h includes/gtest/internal/*.h
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c unittests/dynstring_unittests.cc
 dynstring_unittests: dynstring.o dynstring_unittests.o $(arch_dir)/lib/gtest_main.a
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -lpthread $^ -o $@
+
+funcwatch_output_unittests.o: unittests/funcwatch_output_unittests.cc \
+		       funcwatch_output.h dynstring.h vector.h includes/gtest/*.h includes/gtest/internal/*.h
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c unittests/funcwatch_output_unittests.cc
+funcwatch_output_unittests: funcwatch_output.o dynstring.o vector.o funcwatch_output_unittests.o $(arch_dir)/lib/gtest_main.a
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -lpthread $^ -o $@
