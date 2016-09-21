@@ -6,5 +6,6 @@
 
 funcwatch_param *getFirstNonPointer(funcwatch_param *pointer_param);
 funcwatch_param *get_end_of_list(funcwatch_param *param);
+void funcwatch_param_initialize(funcwatch_param *param);
 
 #endif // _FUNCWATCH_PARAM_UTIL_
