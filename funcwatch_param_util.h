@@ -1,3 +1,7 @@
+#if __cplusplus
+extern "C" {
+#endif
+  
 #ifndef _FUNCWATCH_PARAM_UTIL_
 #define _FUNCWATCH_PARAM_UTIL_
 
@@ -9,3 +13,6 @@ funcwatch_param *get_end_of_list(funcwatch_param *param);
 void funcwatch_param_initialize(funcwatch_param *param);
 
 #endif // _FUNCWATCH_PARAM_UTIL_
+#if __cplusplus
+}
+#endif

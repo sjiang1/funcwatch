@@ -60,7 +60,7 @@ void output_logged_values(FILE *f, funcwatch_run *run){
   return;
 }
 
-static Vector *get_param_of_call_id(Vector *variables, int variables_length, int call_id, int ref){
+Vector *get_param_of_call_id(Vector *variables, int variables_length, int call_id, int ref){
   for(int i =0; i< variables_length; i++){
     Vector *vector = variables + i;
     if(vector->size > 0){
@@ -73,7 +73,7 @@ static Vector *get_param_of_call_id(Vector *variables, int variables_length, int
   return NULL;
 }
 
-static funcwatch_param *get_return_of_call_id(funcwatch_param *variables, int variables_length, int call_id, int ref){
+funcwatch_param *get_return_of_call_id(funcwatch_param *variables, int variables_length, int call_id, int ref){
   for(int i =0; i< variables_length; i++){
     funcwatch_param *variable = variables + i;
     
@@ -84,7 +84,7 @@ static funcwatch_param *get_return_of_call_id(funcwatch_param *variables, int va
   return NULL;
 }
 
-static DynString print_param_vector(Vector params){
+DynString print_param_vector(Vector params){
   if(DEBUG)
     fprintf(stderr, "print param vector\n");
 
@@ -97,7 +97,7 @@ static DynString print_param_vector(Vector params){
   return str;
 }
 
-static DynString print_param_list(funcwatch_param *p){
+DynString print_param_list(funcwatch_param *p){
   while(p != NULL) {
     if(DEBUG)
       fprintf(stderr, "print param list, head: %s\n", p->name);
@@ -110,48 +110,64 @@ static DynString print_param_list(funcwatch_param *p){
   return str;
 }
 
-static DynString print_param(funcwatch_param *p, int is_return) {
+DynString print_param(funcwatch_param *p, int is_return) {
+  DynString paramString;
+  dynstring_init(&paramString);
+
+  int bufferSize = 1024;
   char buffer [1024];
   // print is return, has sub-values, function name, call num, parameter name, parameter size, flags
-  sprintf(buffer, "%d, %s, %d, %s, %zu,", is_return, p->func_name, p->call_num, p->name, p->size);
-  sprintf(buffer, " 0x%x,", p->flags);
-  // fprintf(f, "%d, %s, %d, %s, %zu,", is_return, p->func_name, p->call_num, p->name, p->size);
-  // fprintf(f, " 0x%x,", p->flags);
+  snprintf(buffer, bufferSize, "%d, %s, %d, %s, %zu,", is_return, p->func_name, p->call_num, p->name, p->size);
+  dynstring_append(&paramString, buffer);
+  snprintf(buffer, bufferSize, " 0x%x,", p->flags);
+  dynstring_append(&paramString, buffer);
 
   if(p->type == 0) p->type = " ";
   // print parameter type
   if(p->flags & FW_POINTER){
-    // fprintf(f, "%s *,", p->type);
-    sprintf(buffer, "%s *,", p->type);
+    snprintf(buffer, bufferSize, "%s *,", p->type);
+    dynstring_append(&paramString, buffer);
   }
   else{
-    sprintf(buffer, "%s,", p->type);
+    snprintf(buffer, bufferSize, "%s,", p->type);
+    dynstring_append(&paramString, buffer);
   }
 
   // print parameter value
-  if(strcmp(p->type, "unsupported")==0)
-    sprintf(buffer, "unsupported value\n");
-  else if(p->flags & FW_INVALID)
-    sprintf(buffer, "0\n");
-  else if(p->flags & FW_POINTER
-	  && p->value == 0)
-    sprintf(buffer, "%s\n", "NULL");
+  if(strcmp(p->type, "unsupported")==0){
+    snprintf(buffer, bufferSize, "unsupported value\n");
+    dynstring_append(&paramString, buffer);
+  }
+  else if(p->flags & FW_INVALID){
+    snprintf(buffer, bufferSize, "0\n");
+    dynstring_append(&paramString, buffer);
+  }
+  else if(p->flags & FW_POINTER && p->value == 0){
+    snprintf(buffer, bufferSize, "%s\n", "NULL");
+    dynstring_append(&paramString, buffer);
+  }
   else if(p->flags & FW_INT) {
     if(p->flags & FW_SIGNED){
-      if(p->flags & FW_POINTER)
-	sprintf(buffer, "%ld\n", *(long *)p->value);
-      else
-	sprintf(buffer, "%ld\n", p->value);
+      if(p->flags & FW_POINTER){
+	snprintf(buffer, bufferSize, "%ld\n", *(long *)p->value);
+	dynstring_append(&paramString, buffer);
+      }
+      else{
+	snprintf(buffer, bufferSize, "%ld\n", p->value);
+	dynstring_append(&paramString, buffer);
+      }
     }
     else{
       if(p->flags & FW_POINTER){
 	unsigned long *tmpptr = p->value;
 	unsigned long tmpvalue = *tmpptr;
-	sprintf(buffer, "%lu\n", tmpvalue);
+	snprintf(buffer, bufferSize, "%lu\n", tmpvalue);
+	dynstring_append(&paramString, buffer);
       }else{
 	unsigned long *tmpptr = &(p->value);
 	unsigned long tmpvalue = *tmpptr;
-	sprintf(buffer, "%lu\n", tmpvalue);
+	snprintf(buffer, bufferSize, "%lu\n", tmpvalue);
+	dynstring_append(&paramString, buffer);
       }
     }
   }else if(p->flags & FW_FLOAT) {
@@ -160,29 +176,44 @@ static DynString print_param(funcwatch_param *p, int is_return) {
       tmpptr = p->value;
     else
       tmpptr = &(p->value);
-    sprintf(buffer, "%f\n", *tmpptr);
+    snprintf(buffer, bufferSize, "%f\n", *tmpptr);
+    dynstring_append(&paramString, buffer);
   }
-  else if(p->flags & FW_ENUM)
-    sprintf(buffer, "%s\n", (char *) p->value);
+  else if(p->flags & FW_ENUM){
+    snprintf(buffer, bufferSize, "%s\n", (char *) p->value);
+    dynstring_append(&paramString, buffer);
+  }
   else if(p->flags &FW_CHAR) {
-    if(p->flags &FW_POINTER)
-      sprintf(buffer, "\"%s\"\n", (char *) p->value);
+    if(p->flags &FW_POINTER){
+      snprintf(buffer, bufferSize, "\"%s\"\n", (char *) p->value);
+      dynstring_append(&paramString, buffer);
+    }
     else if(p->flags &FW_SIGNED){
       char *tmpptr = (char *)&(p->value);
       char tmpvalue = *tmpptr;
-      sprintf(buffer, "%c\n", tmpvalue);
+      snprintf(buffer, bufferSize, "%c\n", tmpvalue);
+      dynstring_append(&paramString, buffer);
     }
     else{
       unsigned char *tmpptr = (unsigned char *)&(p->value);
       unsigned char tmpvalue = *tmpptr;
-      sprintf(buffer, "%hhu\n", *tmpptr);
+      snprintf(buffer, bufferSize, "%hhu\n", *tmpptr);
+      dynstring_append(&paramString, buffer);
     }
   }
-  else if(p->flags & FW_STRUCT && p->flags & FW_POINTER)
-    sprintf(buffer, "%p\n", p->value);
-  else if(p->flags & FW_STRUCT)
-    sprintf(buffer, "%p\n", p->addr);
-  else
-    sprintf(buffer, "0x%lx\n", p->value);
+  else if(p->flags & FW_STRUCT && p->flags & FW_POINTER){
+    snprintf(buffer, bufferSize, "%p\n", p->value);
+    dynstring_append(&paramString, buffer);
+  }
+  else if(p->flags & FW_STRUCT){
+    snprintf(buffer, bufferSize, "%p\n", p->addr);
+    dynstring_append(&paramString, buffer);
+  }
+  else{
+    snprintf(buffer, bufferSize, "0x%lx\n", p->value);
+    dynstring_append(&paramString, buffer);
+  }
+  
+  return paramString;
 }
 
