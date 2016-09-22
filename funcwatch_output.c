@@ -3,6 +3,8 @@
 #include "vector.h"
 #include "dynstring.h"
 
+char *int2bin(int a, char *buffer, int buf_size);
+
 void output_logged_values(FILE *f, funcwatch_run *run){
   if(DEBUG){
     fprintf(stderr, "Total Call #%d\n", run->num_calls);
@@ -110,110 +112,110 @@ DynString print_param_list(funcwatch_param *p){
   return str;
 }
 
+/*
+ * Print format:
+ * is_return, function_name, call_id, parameter_name, parameter_size, flags, parameter_type, value, 
+ */
 DynString print_param(funcwatch_param *p, int is_return) {
   DynString paramString;
   dynstring_init(&paramString);
 
   int bufferSize = 1024;
   char buffer [1024];
-  // print is return, has sub-values, function name, call num, parameter name, parameter size, flags
+  // print is return, has sub-values, function name, call num, parameter name, parameter size
   snprintf(buffer, bufferSize, "%d, %s, %d, %s, %zu,", is_return, p->func_name, p->call_num, p->name, p->size);
   dynstring_append(&paramString, buffer);
-  snprintf(buffer, bufferSize, " 0x%x,", p->flags);
+
+  char flagbuffer[33];
+  flagbuffer[32] = '\0';
+  int2bin(p->flags, flagbuffer, 32);  
+  snprintf(buffer, bufferSize, " %s,", flagbuffer);
   dynstring_append(&paramString, buffer);
 
-  if(p->type == 0) p->type = " ";
+  if(p->type == 0) p->type = "";
   // print parameter type
-  if(p->flags & FW_POINTER){
-    snprintf(buffer, bufferSize, "%s *,", p->type);
-    dynstring_append(&paramString, buffer);
-  }
-  else{
-    snprintf(buffer, bufferSize, "%s,", p->type);
-    dynstring_append(&paramString, buffer);
-  }
+  snprintf(buffer, bufferSize, " %s,", p->type);
+  dynstring_append(&paramString, buffer);
 
   // print parameter value
-  if(strcmp(p->type, "unsupported")==0){
-    snprintf(buffer, bufferSize, "unsupported value\n");
+  if(strcmp(p->type, "unsupported")==0 || (p->flags & FW_INVALID)){
+    snprintf(buffer, bufferSize, " unsupported value\n");
     dynstring_append(&paramString, buffer);
   }
-  else if(p->flags & FW_INVALID){
-    snprintf(buffer, bufferSize, "0\n");
+  else if((p->flags & FW_POINTER) && (p->value == 0)){
+    // null pointers
+    snprintf(buffer, bufferSize, " %s\n", "null");
     dynstring_append(&paramString, buffer);
   }
-  else if(p->flags & FW_POINTER && p->value == 0){
-    snprintf(buffer, bufferSize, "%s\n", "NULL");
+  else if(p->flags & FW_POINTER){
+    // non-null pointers
+    // TBC
+  }
+  else if((p->flags & FW_INT) && (p->flags & FW_SIGNED)) {
+    // signed int
+    snprintf(buffer, bufferSize, " %ld\n", p->value);
     dynstring_append(&paramString, buffer);
   }
-  else if(p->flags & FW_INT) {
-    if(p->flags & FW_SIGNED){
-      if(p->flags & FW_POINTER){
-	snprintf(buffer, bufferSize, "%ld\n", *(long *)p->value);
-	dynstring_append(&paramString, buffer);
-      }
-      else{
-	snprintf(buffer, bufferSize, "%ld\n", p->value);
-	dynstring_append(&paramString, buffer);
-      }
-    }
-    else{
-      if(p->flags & FW_POINTER){
-	unsigned long *tmpptr = p->value;
-	unsigned long tmpvalue = *tmpptr;
-	snprintf(buffer, bufferSize, "%lu\n", tmpvalue);
-	dynstring_append(&paramString, buffer);
-      }else{
-	unsigned long *tmpptr = &(p->value);
-	unsigned long tmpvalue = *tmpptr;
-	snprintf(buffer, bufferSize, "%lu\n", tmpvalue);
-	dynstring_append(&paramString, buffer);
-      }
-    }
-  }else if(p->flags & FW_FLOAT) {
+  else if(p->flags & FW_INT){
+    // unsigned int
+    unsigned long *tmpptr = &(p->value);
+    unsigned long tmpvalue = *tmpptr;
+    snprintf(buffer, bufferSize, " %lu\n", tmpvalue);
+    dynstring_append(&paramString, buffer);
+  }
+  else if((p->flags &FW_CHAR) && (p->flags &FW_SIGNED)) {
+    // signed char
+    char *tmpptr = (char *)&(p->value);
+    char tmpvalue = *tmpptr;
+    snprintf(buffer, bufferSize, " %c\n", tmpvalue);
+    dynstring_append(&paramString, buffer);
+  }
+  else if(p->flags &FW_CHAR){
+    // unsigned char
+    unsigned char *tmpptr = (unsigned char *)&(p->value);
+    unsigned char tmpvalue = *tmpptr;
+    snprintf(buffer, bufferSize, " %hhu\n", *tmpptr);
+    dynstring_append(&paramString, buffer);
+  }
+  else if(p->flags & FW_FLOAT) {
+    // float
     float *tmpptr = 0;
-    if(p->flags & FW_POINTER)
-      tmpptr = p->value;
-    else
-      tmpptr = &(p->value);
-    snprintf(buffer, bufferSize, "%f\n", *tmpptr);
+    tmpptr = &(p->value);
+    snprintf(buffer, bufferSize, " %f\n", *tmpptr);
     dynstring_append(&paramString, buffer);
   }
   else if(p->flags & FW_ENUM){
-    snprintf(buffer, bufferSize, "%s\n", (char *) p->value);
-    dynstring_append(&paramString, buffer);
-  }
-  else if(p->flags &FW_CHAR) {
-    if(p->flags &FW_POINTER){
-      snprintf(buffer, bufferSize, "\"%s\"\n", (char *) p->value);
-      dynstring_append(&paramString, buffer);
-    }
-    else if(p->flags &FW_SIGNED){
-      char *tmpptr = (char *)&(p->value);
-      char tmpvalue = *tmpptr;
-      snprintf(buffer, bufferSize, "%c\n", tmpvalue);
-      dynstring_append(&paramString, buffer);
-    }
-    else{
-      unsigned char *tmpptr = (unsigned char *)&(p->value);
-      unsigned char tmpvalue = *tmpptr;
-      snprintf(buffer, bufferSize, "%hhu\n", *tmpptr);
-      dynstring_append(&paramString, buffer);
-    }
-  }
-  else if(p->flags & FW_STRUCT && p->flags & FW_POINTER){
-    snprintf(buffer, bufferSize, "%p\n", p->value);
+    // enum
+    snprintf(buffer, bufferSize, " %s\n", (char *) p->value);
     dynstring_append(&paramString, buffer);
   }
   else if(p->flags & FW_STRUCT){
-    snprintf(buffer, bufferSize, "%p\n", p->addr);
+    // struct value is illustrated by its fields
+    snprintf(buffer, bufferSize, " \n");
     dynstring_append(&paramString, buffer);
   }
   else{
-    snprintf(buffer, bufferSize, "0x%lx\n", p->value);
+    // default
+    snprintf(buffer, bufferSize, " no flag to identify the type\n");
     dynstring_append(&paramString, buffer);
   }
   
   return paramString;
 }
 
+// buffer must have length >= sizeof(int) + 1
+// Write to the buffer backwards so that the binary representation
+// is in the correct order i.e.  the LSB is on the far right
+// instead of the far left of the printed string
+char *int2bin(int a, char *buffer, int buf_size) {
+  buffer += (buf_size - 1);
+
+  for (int i = 31; i >= 0; i--) {
+    *buffer-- = (a & 1) + '0';
+
+    a >>= 1;
+  }
+
+  return buffer;
+}
+  

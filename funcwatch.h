@@ -89,7 +89,8 @@ funcwatch_run *funcwatch_run_program(char *prog_name,  char *func_name, char **a
 #define FW_VOID 0x80
 #define FW_SIGNED 0x100
 #define FW_UNION 0x200
-#define FW_INVALID 0x10000000
+#define FW_CONSTANT 0x400
+#define FW_INVALID 0x80000000
 //flags for internal use
 #define FW_REG_VALUE 0x01
 #endif /* _funcwatch_H */
