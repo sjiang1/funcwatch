@@ -8,6 +8,7 @@
 #include <sys/types.h>
 #include <sys/user.h>
 
+#include <stdint.h>
 #include "vector.h"
 
 #define DEBUG 0
@@ -39,7 +40,7 @@ struct funcwatch_param{
   Dwarf_Addr addr;
   // the level of this param in a struct OR union param
   int struct_level;
-  unsigned long value;
+  uint64_t value;
   double value_float;
   int flags;
   struct funcwatch_param *next;

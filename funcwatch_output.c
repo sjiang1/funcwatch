@@ -149,7 +149,8 @@ DynString print_param(funcwatch_param *p, int is_return) {
   }
   else if(p->flags & FW_POINTER){
     // non-null pointers
-    // TBC
+    snprintf(buffer, bufferSize, " %s\n", "[memory addr]");
+    dynstring_append(&paramString, buffer);
   }
   else if((p->flags & FW_INT) && (p->flags & FW_SIGNED)) {
     // signed int
@@ -165,23 +166,23 @@ DynString print_param(funcwatch_param *p, int is_return) {
   }
   else if((p->flags &FW_CHAR) && (p->flags &FW_SIGNED)) {
     // signed char
-    char *tmpptr = (char *)&(p->value);
-    char tmpvalue = *tmpptr;
-    snprintf(buffer, bufferSize, " %c\n", tmpvalue);
+    char value = 0;
+    memcpy(&value, &p->value, 1);
+    snprintf(buffer, bufferSize, " %d\n", value);
     dynstring_append(&paramString, buffer);
   }
   else if(p->flags &FW_CHAR){
     // unsigned char
-    unsigned char *tmpptr = (unsigned char *)&(p->value);
-    unsigned char tmpvalue = *tmpptr;
-    snprintf(buffer, bufferSize, " %hhu\n", *tmpptr);
+    unsigned char value = 0;
+    memcpy(&value, &p->value, 1);
+    snprintf(buffer, bufferSize, " %d\n", value);
     dynstring_append(&paramString, buffer);
   }
   else if(p->flags & FW_FLOAT) {
     // float
-    float *tmpptr = 0;
-    tmpptr = &(p->value);
-    snprintf(buffer, bufferSize, " %f\n", *tmpptr);
+    float value = 0;
+    memcpy(&value, &p->value_float, sizeof(float));
+    snprintf(buffer, bufferSize, " %f\n", value);
     dynstring_append(&paramString, buffer);
   }
   else if(p->flags & FW_ENUM){
