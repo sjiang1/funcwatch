@@ -2,6 +2,7 @@
 #include "../funcwatch_output.h"
 #include "../funcwatch_param_util.h"
 #include "../dynstring.h"
+#include "../stringutil.h"
 #include "gtest/gtest.h"
 
 TEST(PrintParamTest, IntInput){
@@ -275,6 +276,28 @@ TEST(PrintParamTest, DefaultInputTest){
   char *param_print = stringToPrint.text;
   char *expected_print = "0, printParamTest, 0, param, 0, 00000000000000000000000000000000, unknown, no flag to identify the type\n";
   ASSERT_STREQ(expected_print, param_print);
+  dynstring_inner_free(stringToPrint);
+}
+
+TEST(PrintParamListTest, EmptyListTest){
+  funcwatch_param *head = 0;
+  DynString stringToPrint = print_param_list(head);
+
+  int stringLength = strlen(stringToPrint.text);
+  ASSERT_EQ(0, stringLength);
+  dynstring_inner_free(stringToPrint);
+}
+
+TEST(PrintParamListTest, OneElementListTest){
+  funcwatch_param p;
+  funcwatch_param_initialize(&p);
+
+  fprintf(stderr, "to print\n");
+  DynString stringToPrint = print_param_list(&p);
+  fprintf(stderr, "after function call.\n");
+  
+  int stringLength = strlen(stringToPrint.text);
+  ASSERT_EQ(0, stringLength);
   dynstring_inner_free(stringToPrint);
 }
 

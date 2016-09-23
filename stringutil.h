@@ -13,5 +13,7 @@
 int ends_with(const char *str, const char *suffix);
 int starts_with(const char *str, const char *prefix);
 char *strcpy_deep(const char *str);
+char *int2bin(int a, char *buffer, int buf_size);
+int count_lines(char *str);
 
 #endif //_STRINGUTIL_H

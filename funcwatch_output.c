@@ -2,8 +2,7 @@
 #include "funcwatch_output.h"
 #include "vector.h"
 #include "dynstring.h"
-
-char *int2bin(int a, char *buffer, int buf_size);
+#include "stringutil.h"
 
 void output_logged_values(FILE *f, funcwatch_run *run){
   if(DEBUG){
@@ -100,16 +99,22 @@ DynString print_param_vector(Vector params){
 }
 
 DynString print_param_list(funcwatch_param *p){
+  DynString listString;
+  dynstring_init(&listString);
+  
   while(p != NULL) {
     if(DEBUG)
       fprintf(stderr, "print param list, head: %s\n", p->name);
     
     DynString paramString = print_param(p, 1);
+    dynstring_append(&listString, paramString.text);
+    dynstring_append(&listString, "\n");
+    dynstring_inner_free(paramString);
+    
     p = p->next;
   }
-  DynString str;
-  dynstring_init(&str);
-  return str;
+  
+  return listString;
 }
 
 /*
@@ -204,19 +209,3 @@ DynString print_param(funcwatch_param *p, int is_return) {
   return paramString;
 }
 
-// buffer must have length >= sizeof(int) + 1
-// Write to the buffer backwards so that the binary representation
-// is in the correct order i.e.  the LSB is on the far right
-// instead of the far left of the printed string
-char *int2bin(int a, char *buffer, int buf_size) {
-  buffer += (buf_size - 1);
-
-  for (int i = 31; i >= 0; i--) {
-    *buffer-- = (a & 1) + '0';
-
-    a >>= 1;
-  }
-
-  return buffer;
-}
-  
