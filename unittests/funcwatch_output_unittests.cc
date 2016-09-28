@@ -281,7 +281,7 @@ TEST(PrintParamTest, DefaultInputTest){
 
 TEST(PrintParamListTest, EmptyListTest){
   funcwatch_param *head = 0;
-  DynString stringToPrint = print_param_list(head);
+  DynString stringToPrint = print_param_list_for_return(head);
 
   int stringLength = strlen(stringToPrint.text);
   ASSERT_EQ(0, stringLength);
@@ -292,12 +292,43 @@ TEST(PrintParamListTest, OneElementListTest){
   funcwatch_param p;
   funcwatch_param_initialize(&p);
 
-  fprintf(stderr, "to print\n");
-  DynString stringToPrint = print_param_list(&p);
-  fprintf(stderr, "after function call.\n");
+  DynString stringToPrint = print_param_list_for_return(&p);
+  char *expected_print = "1, (null), -1, (null), 0, 00000000000000000000000000000000, (null), no flag to identify the type\n";
   
-  int stringLength = strlen(stringToPrint.text);
-  ASSERT_EQ(0, stringLength);
+  ASSERT_STREQ(expected_print, stringToPrint.text);
   dynstring_inner_free(stringToPrint);
 }
 
+TEST(PrintParamListTest, TwoElementsListTest){
+  funcwatch_param p1, p2;
+  funcwatch_param_initialize(&p1);
+  funcwatch_param_initialize(&p2);
+  
+  p1.name = "param1";
+  p1.func_name = "printParamTest";
+  p1.call_num = 0;
+  p1.type = "*";
+  p1.size = sizeof(void *);
+  p1.addr = (Dwarf_Addr)(void *)&p1;
+  p1.value = (Dwarf_Addr)(void *)&p1;
+  p1.value_float = -1;
+  p1.flags |= FW_POINTER;
+
+  p2.name = "param2";
+  p2.func_name = "printParamTest";
+  p2.call_num = 0;
+  p2.type = "*";
+  p2.size = sizeof(void *);
+  p2.addr = (Dwarf_Addr)(void *)&p2;
+  p2.value = 0;
+  p2.value_float = -1;
+  p2.flags |= FW_POINTER;
+
+  p1.next = &p2;
+  
+  DynString stringToPrint = print_param_list_for_return(&p1);
+  char *expected_print = "1, printParamTest, 0, param1, 4, 00000000000000000000000000001000, *, [memory addr]\n1, printParamTest, 0, param2, 4, 00000000000000000000000000001000, *, null\n";
+  
+  ASSERT_STREQ(expected_print, stringToPrint.text);
+  dynstring_inner_free(stringToPrint);
+}

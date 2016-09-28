@@ -48,7 +48,7 @@ void output_logged_values(FILE *f, funcwatch_run *run){
     if(hasReturn){
       // print return
       funcwatch_param *r = get_return_of_call_id(run->return_values, run->num_rets, curr_call_id, 0);
-      DynString str = print_param_list(r);
+      DynString str = print_param_list_for_return(r);
     }
     
     if(hasParams){
@@ -98,17 +98,17 @@ DynString print_param_vector(Vector params){
   return str;
 }
 
-DynString print_param_list(funcwatch_param *p){
+DynString print_param_list_for_return(funcwatch_param *p){
   DynString listString;
   dynstring_init(&listString);
   
   while(p != NULL) {
     if(DEBUG)
       fprintf(stderr, "print param list, head: %s\n", p->name);
-    
+
     DynString paramString = print_param(p, 1);
     dynstring_append(&listString, paramString.text);
-    dynstring_append(&listString, "\n");
+    // print_param will pad a new line character in the end of paramString.
     dynstring_inner_free(paramString);
     
     p = p->next;
@@ -137,13 +137,13 @@ DynString print_param(funcwatch_param *p, int is_return) {
   snprintf(buffer, bufferSize, " %s,", flagbuffer);
   dynstring_append(&paramString, buffer);
 
-  if(p->type == 0) p->type = "";
   // print parameter type
   snprintf(buffer, bufferSize, " %s,", p->type);
   dynstring_append(&paramString, buffer);
 
   // print parameter value
-  if(strcmp(p->type, "unsupported")==0 || (p->flags & FW_INVALID)){
+  if(p->type != NULL &&
+     (strcmp(p->type, "unsupported")==0 || (p->flags & FW_INVALID))){
     snprintf(buffer, bufferSize, " unsupported value\n");
     dynstring_append(&paramString, buffer);
   }
@@ -205,7 +205,7 @@ DynString print_param(funcwatch_param *p, int is_return) {
     snprintf(buffer, bufferSize, " no flag to identify the type\n");
     dynstring_append(&paramString, buffer);
   }
-  
+
   return paramString;
 }
 
