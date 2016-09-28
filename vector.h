@@ -1,3 +1,7 @@
+#if __cplusplus
+extern "C" {
+#endif
+
 #ifndef _VECTOR_H
 #define _VECTOR_H
 
@@ -28,3 +32,6 @@ void vector_double_capacity_if_full(Vector *vector);
 void vector_inner_free(Vector *vector);
 
 #endif // _VECTOR_H
+  #if __cplusplus
+}
+#endif

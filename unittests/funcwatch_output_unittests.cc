@@ -3,6 +3,7 @@
 #include "../funcwatch_param_util.h"
 #include "../dynstring.h"
 #include "../stringutil.h"
+#include "../vector.h"
 #include "gtest/gtest.h"
 
 TEST(PrintParamTest, IntInput){
@@ -329,6 +330,29 @@ TEST(PrintParamListTest, TwoElementsListTest){
   DynString stringToPrint = print_param_list_for_return(&p1);
   char *expected_print = "1, printParamTest, 0, param1, 4, 00000000000000000000000000001000, *, [memory addr]\n1, printParamTest, 0, param2, 4, 00000000000000000000000000001000, *, null\n";
   
+  ASSERT_STREQ(expected_print, stringToPrint.text);
+  dynstring_inner_free(stringToPrint);
+}
+
+TEST(PrintParamVectorTest, EmptyVector){
+  Vector v;
+  vector_init(&v);
+  DynString stringToPrint = print_param_vector(v);
+  char *expected_print = "";
+  ASSERT_STREQ(expected_print, stringToPrint.text);
+  dynstring_inner_free(stringToPrint);
+}
+
+TEST(PrintParamVectorTest, OneItemVector){
+  Vector v;
+  vector_init(&v);
+
+  funcwatch_param p;
+  funcwatch_param_initialize(&p);
+  vector_append(&v, &p);
+  
+  DynString stringToPrint = print_param_vector(v);
+  char *expected_print = "0, (null), -1, (null), 0, 00000000000000000000000000000000, (null), no flag to identify the type\n";
   ASSERT_STREQ(expected_print, stringToPrint.text);
   dynstring_inner_free(stringToPrint);
 }

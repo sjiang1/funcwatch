@@ -14,7 +14,16 @@ void output_logged_values(FILE *f, funcwatch_run *run){
 	  "Is Return Flag", "Function", "Call Number",
 	  "Variable Name", "Variable Size",
 	  "Usage Flags", "Variable Type", "Value");
+  
+  DynString toPrint = output_logged_values_inner(run);
+  fprintf(f, "%s", toPrint.text);
+  dynstring_inner_free(toPrint);
+}
 
+DynString output_logged_values_inner(funcwatch_run *run){
+  DynString toPrint;
+  dynstring_init(&toPrint);
+  
   Vector temporary_call_ids;
   vector_init(&temporary_call_ids);
   
@@ -35,7 +44,8 @@ void output_logged_values(FILE *f, funcwatch_run *run){
     
     int hasReturn = 1;
     if(run->return_values == NULL) {
-      fprintf(stderr, "function %s does not have return value.\n", run->func_name);
+      if(DEBUG)
+	fprintf(stderr, "function %s does not have return value.\n", run->func_name);
       hasReturn = 0;
     }
     
@@ -43,22 +53,28 @@ void output_logged_values(FILE *f, funcwatch_run *run){
       // print input values
       Vector callparams = run->params[curr_call_id];
       DynString str = print_param_vector(callparams);
+      dynstring_append(&toPrint, str.text);
+      dynstring_inner_free(str);
     }
     
     if(hasReturn){
       // print return
       funcwatch_param *r = get_return_of_call_id(run->return_values, run->num_rets, curr_call_id, 0);
       DynString str = print_param_list_for_return(r);
+      dynstring_append(&toPrint, str.text);
+      dynstring_inner_free(str);
     }
     
     if(hasParams){
       // print parameters values when function returns
       Vector *ret_p = get_param_of_call_id(run->ret_params, run->num_rets, curr_call_id, 1);
       DynString str = print_param_vector(*ret_p);
+      dynstring_append(&toPrint, str.text);
+      dynstring_inner_free(str);
     }
   }
 
-  return;
+  return toPrint;
 }
 
 Vector *get_param_of_call_id(Vector *variables, int variables_length, int call_id, int ref){
@@ -85,20 +101,7 @@ funcwatch_param *get_return_of_call_id(funcwatch_param *variables, int variables
   return NULL;
 }
 
-DynString print_param_vector(Vector params){
-  if(DEBUG)
-    fprintf(stderr, "print param vector\n");
-
-  for(int i =0; i<params.size; i++){
-    funcwatch_param *p = vector_get(&params, i);
-    DynString paramString = print_param(p, 0);
-  }
-  DynString str;
-  dynstring_init(&str);
-  return str;
-}
-
-DynString print_param_list_for_return(funcwatch_param *p){
+DynString print_param_list(funcwatch_param *p, int is_return){
   DynString listString;
   dynstring_init(&listString);
   
@@ -106,7 +109,7 @@ DynString print_param_list_for_return(funcwatch_param *p){
     if(DEBUG)
       fprintf(stderr, "print param list, head: %s\n", p->name);
 
-    DynString paramString = print_param(p, 1);
+    DynString paramString = print_param(p, is_return);
     dynstring_append(&listString, paramString.text);
     // print_param will pad a new line character in the end of paramString.
     dynstring_inner_free(paramString);
@@ -115,6 +118,27 @@ DynString print_param_list_for_return(funcwatch_param *p){
   }
   
   return listString;
+}
+
+DynString print_param_vector(Vector params){
+  if(DEBUG)
+    fprintf(stderr, "print param vector\n");
+
+  DynString toPrint;
+  dynstring_init(&toPrint);
+  
+  for(int i =0; i<params.size; i++){
+    funcwatch_param *p = vector_get(&params, i);
+    DynString paramString = print_param_list(p, 0);
+    dynstring_append(&toPrint, paramString.text);
+    dynstring_inner_free(paramString);
+  }
+  
+  return toPrint;
+}
+
+DynString print_param_list_for_return(funcwatch_param *p){
+  return print_param_list(p, 1);
 }
 
 /*
