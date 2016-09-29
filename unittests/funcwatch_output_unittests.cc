@@ -356,3 +356,84 @@ TEST(PrintParamVectorTest, OneItemVector){
   ASSERT_STREQ(expected_print, stringToPrint.text);
   dynstring_inner_free(stringToPrint);
 }
+
+TEST(PrintParamVectorTest, OneListVector){
+  Vector v;
+  vector_init(&v);
+
+  funcwatch_param p1, p2;
+  funcwatch_param_initialize(&p1);
+  funcwatch_param_initialize(&p2);
+  
+  p1.name = "param1";
+  p1.func_name = "printParamTest";
+  p1.call_num = 0;
+  p1.type = "*";
+  p1.size = sizeof(void *);
+  p1.addr = (Dwarf_Addr)(void *)&p1;
+  p1.value = (Dwarf_Addr)(void *)&p1;
+  p1.value_float = -1;
+  p1.flags |= FW_POINTER;
+
+  p2.name = "param2";
+  p2.func_name = "printParamTest";
+  p2.call_num = 0;
+  p2.type = "*";
+  p2.size = sizeof(void *);
+  p2.addr = (Dwarf_Addr)(void *)&p2;
+  p2.value = 0;
+  p2.value_float = -1;
+  p2.flags |= FW_POINTER;
+
+  p1.next = &p2;
+
+  vector_append(&v, &p1);
+  
+  DynString stringToPrint = print_param_vector(v);
+  char *expected_print = "0, printParamTest, 0, param1, 4, 00000000000000000000000000001000, *, [memory addr]\n0, printParamTest, 0, param2, 4, 00000000000000000000000000001000, *, null\n";
+  ASSERT_STREQ(expected_print, stringToPrint.text);
+  dynstring_inner_free(stringToPrint);
+}
+
+TEST(PrintParamVectorTest, TwoItemsVector){
+  Vector v;
+  vector_init(&v);
+
+  funcwatch_param p;
+  funcwatch_param_initialize(&p);
+  vector_append(&v, &p);
+
+  funcwatch_param p1, p2;
+  funcwatch_param_initialize(&p1);
+  funcwatch_param_initialize(&p2);
+  
+  p1.name = "param1";
+  p1.func_name = "printParamTest";
+  p1.call_num = 0;
+  p1.type = "*";
+  p1.size = sizeof(void *);
+  p1.addr = (Dwarf_Addr)(void *)&p1;
+  p1.value = (Dwarf_Addr)(void *)&p1;
+  p1.value_float = -1;
+  p1.flags |= FW_POINTER;
+
+  p2.name = "param2";
+  p2.func_name = "printParamTest";
+  p2.call_num = 0;
+  p2.type = "*";
+  p2.size = sizeof(void *);
+  p2.addr = (Dwarf_Addr)(void *)&p2;
+  p2.value = 0;
+  p2.value_float = -1;
+  p2.flags |= FW_POINTER;
+
+  p1.next = &p2;
+
+  vector_append(&v, &p1);
+  
+  DynString stringToPrint = print_param_vector(v);
+  char *expected_print = "0, (null), -1, (null), 0, 00000000000000000000000000000000, (null), no flag to identify the type\n0, printParamTest, 0, param1, 4, 00000000000000000000000000001000, *, [memory addr]\n0, printParamTest, 0, param2, 4, 00000000000000000000000000001000, *, null\n";
+  ASSERT_STREQ(expected_print, stringToPrint.text);
+  dynstring_inner_free(stringToPrint);
+}
+
