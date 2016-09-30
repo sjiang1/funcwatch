@@ -282,7 +282,7 @@ TEST(PrintParamTest, DefaultInputTest){
 
 TEST(PrintParamListTest, EmptyListTest){
   funcwatch_param *head = 0;
-  DynString stringToPrint = print_param_list_for_return(head);
+  DynString stringToPrint = print_param_list(head, 1);
 
   int stringLength = strlen(stringToPrint.text);
   ASSERT_EQ(0, stringLength);
@@ -293,7 +293,7 @@ TEST(PrintParamListTest, OneElementListTest){
   funcwatch_param p;
   funcwatch_param_initialize(&p);
 
-  DynString stringToPrint = print_param_list_for_return(&p);
+  DynString stringToPrint = print_param_list(&p, 1);
   char *expected_print = "1, (null), -1, (null), 0, 00000000000000000000000000000000, (null), no flag to identify the type\n";
   
   ASSERT_STREQ(expected_print, stringToPrint.text);
@@ -327,7 +327,7 @@ TEST(PrintParamListTest, TwoElementsListTest){
 
   p1.next = &p2;
   
-  DynString stringToPrint = print_param_list_for_return(&p1);
+  DynString stringToPrint = print_param_list(&p1,1);
   char *expected_print = "1, printParamTest, 0, param1, 4, 00000000000000000000000000001000, *, [memory addr]\n1, printParamTest, 0, param2, 4, 00000000000000000000000000001000, *, null\n";
   
   ASSERT_STREQ(expected_print, stringToPrint.text);
@@ -337,7 +337,7 @@ TEST(PrintParamListTest, TwoElementsListTest){
 TEST(PrintParamVectorTest, EmptyVector){
   Vector v;
   vector_init(&v);
-  DynString stringToPrint = print_param_vector(v);
+  DynString stringToPrint = print_param_vector(v, 0);
   char *expected_print = "";
   ASSERT_STREQ(expected_print, stringToPrint.text);
   dynstring_inner_free(stringToPrint);
@@ -351,7 +351,7 @@ TEST(PrintParamVectorTest, OneItemVector){
   funcwatch_param_initialize(&p);
   vector_append(&v, &p);
   
-  DynString stringToPrint = print_param_vector(v);
+  DynString stringToPrint = print_param_vector(v,0);
   char *expected_print = "0, (null), -1, (null), 0, 00000000000000000000000000000000, (null), no flag to identify the type\n";
   ASSERT_STREQ(expected_print, stringToPrint.text);
   dynstring_inner_free(stringToPrint);
@@ -389,7 +389,7 @@ TEST(PrintParamVectorTest, OneListVector){
 
   vector_append(&v, &p1);
   
-  DynString stringToPrint = print_param_vector(v);
+  DynString stringToPrint = print_param_vector(v,0);
   char *expected_print = "0, printParamTest, 0, param1, 4, 00000000000000000000000000001000, *, [memory addr]\n0, printParamTest, 0, param2, 4, 00000000000000000000000000001000, *, null\n";
   ASSERT_STREQ(expected_print, stringToPrint.text);
   dynstring_inner_free(stringToPrint);
@@ -428,12 +428,140 @@ TEST(PrintParamVectorTest, TwoItemsVector){
   p2.flags |= FW_POINTER;
 
   p1.next = &p2;
-
   vector_append(&v, &p1);
   
-  DynString stringToPrint = print_param_vector(v);
+  DynString stringToPrint = print_param_vector(v,0);
   char *expected_print = "0, (null), -1, (null), 0, 00000000000000000000000000000000, (null), no flag to identify the type\n0, printParamTest, 0, param1, 4, 00000000000000000000000000001000, *, [memory addr]\n0, printParamTest, 0, param2, 4, 00000000000000000000000000001000, *, null\n";
   ASSERT_STREQ(expected_print, stringToPrint.text);
   dynstring_inner_free(stringToPrint);
 }
 
+
+/*
+ *
+ * Start testing output_logged_values
+ *
+ */
+
+// utility funciton
+void initialize_funcwatch_run(funcwatch_run * run){
+  run->prog_name = "XProgram";
+  run->func_name = "XFunction";
+  run->params = NULL;
+  run->ret_params = NULL;
+  run->return_values = NULL;
+  run->num_calls = 0;
+  run->num_rets = 0;
+  run->num_params = 0;
+}
+
+TEST(OutputLoggedValuesTest, EmptyRun){
+  funcwatch_run run;
+  initialize_funcwatch_run(&run);
+  DynString stringToPrint = output_logged_values_inner(&run);
+  char *expected_print = "";
+  ASSERT_STREQ(expected_print, stringToPrint.text);
+}
+
+TEST(OutputLoggedValuesTest, OneEmptyCallRun){
+  funcwatch_run run;
+  initialize_funcwatch_run(&run);
+  Vector params, ret_params;
+  vector_init(&params);
+  vector_init(&ret_params);
+  
+  run.params = &params;
+  run.ret_params = &ret_params;
+  run.num_calls = 1;
+  run.num_rets = 0;
+  run.num_params = 0;
+  
+  DynString stringToPrint = output_logged_values_inner(&run);
+  char *expected_print = "";
+  ASSERT_STREQ(expected_print, stringToPrint.text);
+}
+
+TEST(OutputLoggedValuesTest, OneTwoParamCallRun){
+  funcwatch_run run;
+  initialize_funcwatch_run(&run);
+  Vector params, ret_params;
+  vector_init(&params);
+  vector_init(&ret_params);
+  
+  funcwatch_param p;
+  funcwatch_param_initialize(&p);
+  p.call_num = 0;
+  p.name = "param1";
+  vector_append(&params, &p);
+
+  funcwatch_param p1, p2;
+  funcwatch_param_initialize(&p1);
+  funcwatch_param_initialize(&p2);
+  
+  p1.name = "param2";
+  p1.func_name = "printParamTest";
+  p1.call_num = 0;
+  p1.type = "*";
+  p1.size = sizeof(void *);
+  p1.addr = (Dwarf_Addr)(void *)&p1;
+  p1.value = (Dwarf_Addr)(void *)&p1;
+  p1.value_float = -1;
+  p1.flags |= FW_POINTER;
+
+  p2.name = "param2.1";
+  p2.func_name = "printParamTest";
+  p2.call_num = 0;
+  p2.type = "*";
+  p2.size = sizeof(void *);
+  p2.addr = (Dwarf_Addr)(void *)&p2;
+  p2.value = 0;
+  p2.value_float = -1;
+  p2.flags |= FW_POINTER;
+
+  p1.next = &p2;
+  vector_append(&params, &p1);
+
+  // Update ret_params
+  funcwatch_param ret_p;
+  funcwatch_param_initialize(&ret_p);
+  ret_p.call_num = 0;
+  ret_p.name = "param1";
+  vector_append(&ret_params, &ret_p);
+
+  funcwatch_param ret_p1, ret_p2;
+  funcwatch_param_initialize(&ret_p1);
+  funcwatch_param_initialize(&ret_p2);
+  
+  ret_p1.name = "param2";
+  ret_p1.func_name = "printParamTest";
+  ret_p1.call_num = 0;
+  ret_p1.type = "*";
+  ret_p1.size = sizeof(void *);
+  ret_p1.addr = (Dwarf_Addr)(void *)&ret_p1;
+  ret_p1.value = (Dwarf_Addr)(void *)&ret_p1;
+  ret_p1.value_float = -1;
+  ret_p1.flags |= FW_POINTER;
+
+  ret_p2.name = "param2.1";
+  ret_p2.func_name = "printParamTest";
+  ret_p2.call_num = 0;
+  ret_p2.type = "*";
+  ret_p2.size = sizeof(void *);
+  ret_p2.addr = (Dwarf_Addr)(void *)&ret_p2;
+  ret_p2.value = -1;
+  ret_p2.value_float = -1;
+  ret_p2.flags |= FW_POINTER;
+
+  ret_p1.next = &ret_p2;
+  vector_append(&ret_params, &ret_p1);
+
+  run.params = &params;
+  run.ret_params = &ret_params;
+  run.num_calls = 1;
+  run.num_rets = 0;
+  run.num_params = 0;
+  
+  DynString stringToPrint = output_logged_values_inner(&run);
+  char *expected_print = "0, (null), 0, param1, 0, 00000000000000000000000000000000, (null), no flag to identify the type\n0, printParamTest, 0, param2, 4, 00000000000000000000000000001000, *, [memory addr]\n0, printParamTest, 0, param2.1, 4, 00000000000000000000000000001000, *, null\n1, (null), 0, param1, 0, 00000000000000000000000000000000, (null), no flag to identify the type\n1, printParamTest, 0, param2, 4, 00000000000000000000000000001000, *, [memory addr]\n1, printParamTest, 0, param2.1, 4, 00000000000000000000000000001000, *, [memory addr]\n";
+  ASSERT_STREQ(expected_print, stringToPrint.text);
+}

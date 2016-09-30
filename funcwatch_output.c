@@ -41,6 +41,14 @@ DynString output_logged_values_inner(funcwatch_run *run){
       }
       hasParams = 0;
     }
+    else if(run->params[0].size == 0 || run->ret_params[0].size == 0){
+      // later, we need to find param based on the curr_call_id
+      // if the params/ret_params are empty, we cannot find the param
+      // will cause a segmentation error when we assume
+      // that there always should be a param found'
+      hasParams = 0;
+    }
+
     
     int hasReturn = 1;
     if(run->return_values == NULL) {
@@ -52,7 +60,7 @@ DynString output_logged_values_inner(funcwatch_run *run){
     if(hasParams){
       // print input values
       Vector callparams = run->params[curr_call_id];
-      DynString str = print_param_vector(callparams);
+      DynString str = print_param_vector(callparams, 0);
       dynstring_append(&toPrint, str.text);
       dynstring_inner_free(str);
     }
@@ -60,15 +68,15 @@ DynString output_logged_values_inner(funcwatch_run *run){
     if(hasReturn){
       // print return
       funcwatch_param *r = get_return_of_call_id(run->return_values, run->num_rets, curr_call_id, 0);
-      DynString str = print_param_list_for_return(r);
+      DynString str = print_param_list(r, 1);
       dynstring_append(&toPrint, str.text);
       dynstring_inner_free(str);
     }
     
     if(hasParams){
       // print parameters values when function returns
-      Vector *ret_p = get_param_of_call_id(run->ret_params, run->num_rets, curr_call_id, 1);
-      DynString str = print_param_vector(*ret_p);
+      Vector *ret_p = get_param_of_call_id(run->ret_params, run->num_calls, curr_call_id, 1);
+      DynString str = print_param_vector(*ret_p, 1);
       dynstring_append(&toPrint, str.text);
       dynstring_inner_free(str);
     }
@@ -120,7 +128,7 @@ DynString print_param_list(funcwatch_param *p, int is_return){
   return listString;
 }
 
-DynString print_param_vector(Vector params){
+DynString print_param_vector(Vector params, int is_return_param){
   if(DEBUG)
     fprintf(stderr, "print param vector\n");
 
@@ -129,7 +137,7 @@ DynString print_param_vector(Vector params){
   
   for(int i =0; i<params.size; i++){
     funcwatch_param *p = vector_get(&params, i);
-    DynString paramString = print_param_list(p, 0);
+    DynString paramString = print_param_list(p, is_return_param);
     dynstring_append(&toPrint, paramString.text);
     dynstring_inner_free(paramString);
   }
