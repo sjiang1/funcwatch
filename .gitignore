@@ -49,6 +49,7 @@ tests/test_pointer_0_int
 tests/test_pointer_1_char
 tests/test_pointer_2_struct0
 tests/test_pointer_3_struct1
+tests/test_pointer_4_pointer0
 tests/test_primitive_0_int
 tests/test_primitive_1_char
 tests/test_primitive_2_uchar

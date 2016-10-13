@@ -23,9 +23,6 @@ extern "C" {
   DynString print_param_vector(Vector params, int is_return_param);
   // the lowest level function for print parameter/return
   DynString print_param(funcwatch_param *p, int is_return);
-  // utility function used by output_logged_values_inner
-  funcwatch_param *get_return_of_call_id(funcwatch_param *returns, int returns_cnt, int call_id, int ref);
-  Vector *get_param_of_call_id(Vector *params, int params_cnt, int call_id, int ref);
   
 #endif // _FUNCWATCH_OUTPUT_
 #if __cplusplus

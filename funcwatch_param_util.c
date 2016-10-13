@@ -38,3 +38,28 @@ void funcwatch_param_initialize(funcwatch_param *param){
   param->struct_level = 0;
   
 }
+
+Vector *get_param_of_call_id(Vector *variables, int variables_length, int call_id){
+  Vector *vector = variables;
+  for(int i =0; i< variables_length; i++){
+    if(vector->size > 0){
+      funcwatch_param *variable = vector_get(vector, 0);
+      if(variable->call_num == call_id){
+	return vector;
+      }
+    }
+    vector = vector + 1;
+  }
+  return NULL;
+}
+
+funcwatch_param *get_return_of_call_id(funcwatch_param *variables, int variables_length, int call_id){
+  for(int i =0; i< variables_length; i++){
+    funcwatch_param *variable = variables + i;
+
+    if(variable->call_num == call_id){
+      return variable;
+    }
+  }
+  return NULL;
+}

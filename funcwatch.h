@@ -7,11 +7,10 @@
 #include <dwarf.h>
 #include <sys/types.h>
 #include <sys/user.h>
-
 #include <stdint.h>
 #include "vector.h"
 
-#define DEBUG 0
+#define DEBUG 1
 
 typedef struct user_regs_struct user_regs_struct;
 typedef struct user_fpregs_struct user_fpregs_struct;
@@ -28,21 +27,31 @@ struct funcwatch_param{
   char *name;
   char *func_name;
   int call_num;
-  char *type; // human readable
+  
   // these two members are used when funcwatch collects parameters' values
   // however, dwarf_die may be freed after dwarf_finish,
   // they should not be used after funcwatch_run_program finishes
   Dwarf_Die type_die, var_die;
-  size_t size; // bytes
-  // the address of the var_die.
-  // if the parameter is a struct,
-  // the address helps to calculate its members
+
+  /*--type-related--*/
+  // human readable
+  char *type;
+  // size in bytes
+  size_t size;
+  // type flags, including INVALID,
+  // which indicates the param is invalid.
+  int flags;
+  /*----------------*/
+
+  /*--value-related--*/
   Dwarf_Addr addr;
-  // the level of this param in a struct OR union param
-  int struct_level;
   uint64_t value;
   double value_float;
-  int flags;
+  /*-----------------*/
+  
+  // the level of this param in a struct OR union param
+  int struct_level;
+
   struct funcwatch_param *next;
 };
 
@@ -50,14 +59,36 @@ typedef struct funcwatch_param funcwatch_param;
 
 typedef struct {
   char *prog_name, *func_name;
-  funcwatch_param **params;
-  funcwatch_param **ret_params;
+  /* Vector Array: params
+   * Each vector stores parameters values for one function call
+   * e.g. 
+   *   params[0] : Vector 0: call 0
+   *   params[1] : Vector 1: call 1
+   *   etc.
+
+   * A vector is a dynamic array of lists of params
+   * i.e. vector = (list<param>)[], an array of lists
+   *   each element in the vector stores the head of the list
+   *   each list denotes a parameter
+   * e.g.
+   *   vector[0] : param 0 -> param 0.field1 -> param0.field2
+   *   vector[1] : param 1 
+   *   etc.
+
+   * Each list contains all the values that compose a parameter
+   */
+  Vector *params; 
+  Vector *ret_params;
   funcwatch_param *return_values;
   int num_calls; // every time the num_calls increases, there will be new params added to params
   int num_rets;  // the number of calls that have been returned. every time the num_rets increases, there should be new returns added to ret_params and return_values
-  Vector call_stack; // the call stack for the function calls. used for recursive ones to identify each different call
-  
   int num_params;
+  
+  /* 
+   * The following fields should be discarded 
+   * once funcwatch_run_program finishes 
+   */
+  Vector call_stack; // the call stack for the function calls. used for recursive ones to identify each different call
   int fd; // file descriptor for the scene. Passed to libdwarf and any other libraries that need to read it.
   int mem_fd; //file descriptor for reading and writing process memory
   Dwarf_Debug dwarf_ptr;

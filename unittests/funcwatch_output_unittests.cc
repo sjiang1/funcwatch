@@ -341,6 +341,7 @@ TEST(PrintParamVectorTest, EmptyVector){
   char *expected_print = "";
   ASSERT_STREQ(expected_print, stringToPrint.text);
   dynstring_inner_free(stringToPrint);
+  free(v.data);
 }
 
 TEST(PrintParamVectorTest, OneItemVector){
@@ -355,6 +356,7 @@ TEST(PrintParamVectorTest, OneItemVector){
   char *expected_print = "0, (null), -1, (null), 0, 00000000000000000000000000000000, (null), no flag to identify the type\n";
   ASSERT_STREQ(expected_print, stringToPrint.text);
   dynstring_inner_free(stringToPrint);
+  free(v.data);
 }
 
 TEST(PrintParamVectorTest, OneListVector){
@@ -393,6 +395,7 @@ TEST(PrintParamVectorTest, OneListVector){
   char *expected_print = "0, printParamTest, 0, param1, 4, 00000000000000000000000000001000, *, [memory addr]\n0, printParamTest, 0, param2, 4, 00000000000000000000000000001000, *, null\n";
   ASSERT_STREQ(expected_print, stringToPrint.text);
   dynstring_inner_free(stringToPrint);
+  free(v.data);
 }
 
 TEST(PrintParamVectorTest, TwoItemsVector){
@@ -434,6 +437,7 @@ TEST(PrintParamVectorTest, TwoItemsVector){
   char *expected_print = "0, (null), -1, (null), 0, 00000000000000000000000000000000, (null), no flag to identify the type\n0, printParamTest, 0, param1, 4, 00000000000000000000000000001000, *, [memory addr]\n0, printParamTest, 0, param2, 4, 00000000000000000000000000001000, *, null\n";
   ASSERT_STREQ(expected_print, stringToPrint.text);
   dynstring_inner_free(stringToPrint);
+  free(v.data);  
 }
 
 
@@ -479,6 +483,8 @@ TEST(OutputLoggedValuesTest, OneEmptyCallRun){
   DynString stringToPrint = output_logged_values_inner(&run);
   char *expected_print = "";
   ASSERT_STREQ(expected_print, stringToPrint.text);
+  free(params.data);
+  free(ret_params.data);
 }
 
 TEST(OutputLoggedValuesTest, OneTwoParamCallRun){
@@ -564,4 +570,6 @@ TEST(OutputLoggedValuesTest, OneTwoParamCallRun){
   DynString stringToPrint = output_logged_values_inner(&run);
   char *expected_print = "0, (null), 0, param1, 0, 00000000000000000000000000000000, (null), no flag to identify the type\n0, printParamTest, 0, param2, 4, 00000000000000000000000000001000, *, [memory addr]\n0, printParamTest, 0, param2.1, 4, 00000000000000000000000000001000, *, null\n1, (null), 0, param1, 0, 00000000000000000000000000000000, (null), no flag to identify the type\n1, printParamTest, 0, param2, 4, 00000000000000000000000000001000, *, [memory addr]\n1, printParamTest, 0, param2.1, 4, 00000000000000000000000000001000, *, [memory addr]\n";
   ASSERT_STREQ(expected_print, stringToPrint.text);
+  free(params.data);
+  free(ret_params.data);
 }

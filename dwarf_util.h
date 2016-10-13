@@ -5,5 +5,6 @@
 #include "funcwatch.h"
 
 void get_type_info_from_var_die(Dwarf_Debug dbg, Dwarf_Die var_die, funcwatch_param *p) ;
+void get_type_info_from_parent_type_die(Dwarf_Debug dbg, Dwarf_Die parent_type_die, funcwatch_param *p) ;
 
 #endif // _DWARF_UTIL_

@@ -24,16 +24,48 @@
 
 #include "funcwatch.h"
 #include "vector.h"
+#include "stringutil.h"
 #include "dwarf_util.h"
 #include "funcwatch_param_util.h"
 
 void funcwatch_get_params(funcwatch_run *run);
 
-static void resolve_pointer(funcwatch_run *run, funcwatch_param *p);
-static void resolve_enum(funcwatch_run *run, funcwatch_param *p);
-static void resolve_struct(funcwatch_run *run, funcwatch_param *p, int is_resolve_pointer);
+static void get_value(funcwatch_param *p, funcwatch_run *run, Dwarf_Unsigned fbreg);
+static void get_value_from_remote_process_inner(funcwatch_param *param, pid_t pid);
+
+static funcwatch_param *resolve_pointer(funcwatch_run *run, funcwatch_param *p);
+static funcwatch_param *resolve_enum(funcwatch_run *run, funcwatch_param *p);
+static funcwatch_param *resolve_struct(funcwatch_run *run, funcwatch_param *p, int is_resolve_pointer);
 void copy_changes(pid_t pid, unsigned long *old_buf, unsigned long *new_buf, unsigned  long address, size_t size);
 //begin content
+
+
+static void get_value(funcwatch_param *p, funcwatch_run *run, Dwarf_Unsigned fbreg){
+  Dwarf_Unsigned address = 0;
+  int flags = 0;
+  int eval_res = evaluate_address(run, &(p->var_die), DW_AT_location, fbreg, &flags, &address);
+  if(flags & FW_INVALID){
+    p->flags |= FW_INVALID;
+  }
+  else if(flags & FW_REG_VALUE){
+    // evalute_address will extract the value at the register
+    p->value = address;
+    p->addr = 0;
+    debug_printf("Warning: There is a bug regarding to evalute_address from a register. \
+                  Parameter %s is skipped.\n", p->name);
+  }
+  else {
+    void *tmpptr = (void *)address;
+    p->addr = tmpptr;
+    debug_printf("Located parameter %s at %p\n", p->name, tmpptr);
+    if(p->flags & FW_STRUCT && !(p->flags & FW_POINTER))
+      p->value = 0;
+    else if(p->flags & FW_UNION && !(p->flags & FW_POINTER))
+      p->value = 0;
+    else
+      get_value_from_remote_process_inner(p, run->child_pid);
+  }
+}
 
 /*
  * Get the value from process pid to assigne the value to param
@@ -53,7 +85,7 @@ void copy_changes(pid_t pid, unsigned long *old_buf, unsigned long *new_buf, uns
  * for struct types ******************
  *     this function does not accept struct types! we do not obtain struct types from remote process
  */
-void get_value_from_remote_process(funcwatch_param *param, pid_t pid, void * remote_address){
+void get_value_from_remote_process_inner(funcwatch_param *param, pid_t pid){
   errno = 0;
 	  
   if(param->flags & FW_STRUCT && !(param->flags & FW_POINTER)){
@@ -66,6 +98,7 @@ void get_value_from_remote_process(funcwatch_param *param, pid_t pid, void * rem
     return;
   }
 
+  void *remote_address = (void *) param->addr;
   param->value = 0;
   if(param->flags & FW_POINTER || param->flags & FW_ENUM) {
     param->value = ptrace(PTRACE_PEEKDATA, pid,  remote_address, 0);
@@ -184,9 +217,14 @@ void get_value_from_remote_process(funcwatch_param *param, pid_t pid, void * rem
     return;
 }
 
+/*
+ * Get params for a call
+ */
 void funcwatch_get_params(funcwatch_run *run) {
   int n_params = 0;
-  funcwatch_param * params_to_get = NULL;
+  Vector params_to_get;
+  vector_init(&params_to_get);
+  
   long rc = 0;
   errno = 0;
   int flags = 0;
@@ -200,7 +238,7 @@ void funcwatch_get_params(funcwatch_run *run) {
   Dwarf_Die var_die;
   Dwarf_Error err = err;
   Dwarf_Half tag;
-  dwarf_child(run->function_die, &var_die,&err);
+  dwarf_child(run->function_die, &var_die, &err);
 
   while(1) {
     if (dwarf_tag(var_die, &tag, &err) != DW_DLV_OK)
@@ -214,74 +252,45 @@ void funcwatch_get_params(funcwatch_run *run) {
       }
       
       ++ n_params;
-      funcwatch_param *p = params_to_get;
-      if(params_to_get == NULL) {
-        params_to_get = (funcwatch_param *) malloc(sizeof(funcwatch_param));
-	params_to_get->next = NULL;
-	p = params_to_get;
-      }
-      else {
-	p = get_end_of_list(p);
-	p->next = (funcwatch_param *) malloc(sizeof(funcwatch_param));
-	p = p->next;
-	p->next = NULL;
-      }
+      funcwatch_param *p = (funcwatch_param *) malloc(sizeof(funcwatch_param));
+      vector_append(&params_to_get, p);
+      run->num_params = run->num_params + 1;
+      
+      funcwatch_param_initialize(p);
       p->name = var_name;
       p->func_name = run->func_name;
       p->call_num = run->num_calls-1;
-
-      p->struct_level = 0;
       p->var_die = var_die;
-      p->next = NULL;
       get_type_info_from_var_die(run->dwarf_ptr, var_die, p);
 
       if(p->size > 0 && p->size < 4 && !(p->flags & FW_POINTER)){
-	debug_printf("Warning: parameter %s, there is a bug regarding to char/short as a parameter. the collected value may be incorrect.\n",
+	debug_printf("Warning: parameter %s, \
+                      there is a bug regarding to char/short as a parameter. \
+                      the collected value may be incorrect.\n",
 		     p->name);
       }
       
       //now find out where it is, and get the value of the parameter
-      Dwarf_Unsigned address = 0;
-      flags = 0;
-      eval_res = evaluate_address(run, &var_die, DW_AT_location, fbreg, &flags, &address);
-      if(flags & FW_REG_VALUE){
-	// evalute_address will extract the value at the register
-	p->value = address;
-	p->addr = 0;
-	debug_printf("Warning: There is a bug regarding to evalute_address from a register. Parameter %s is skipped.\n", p->name);
+      get_value(p, run, fbreg);
+
+      if(p->flags & FW_INVALID){
+	p->value = 0;
       }
-      else {
-	void *tmpptr = (void *)address;
-	p->addr = tmpptr;
-	debug_printf("Located parameter %s at %p\n", var_name, tmpptr);
-	if(flags & FW_INVALID)
-	  p->value = 0;
-	else{
-	  if(p->flags & FW_STRUCT && !(p->flags & FW_POINTER))
-	    p->value = tmpptr;
-	  else if(p->flags & FW_UNION && !(p->flags & FW_POINTER))
-	    p->value = tmpptr;
-	  else
-	    get_value_from_remote_process(p, run->child_pid, tmpptr);
-	}
+      else if(p->flags & FW_POINTER){
+	resolve_pointer(run, p);
+      }
+      else if(p->flags & FW_ENUM){
+	resolve_enum(run, p);
+      }
+      else if(p->flags & FW_UNION){
+	resolve_struct(run, p, 0);
+      }
+      else if(p->flags &FW_STRUCT){
+	resolve_struct(run, p, 1);
       }
       
-      if(flags & FW_INVALID)
-	p->flags |= FW_INVALID;
-      else {
-	if(p->flags & FW_ENUM)
-	  resolve_enum(run, p);
-	else if(p->flags & FW_UNION)
-	  resolve_struct(run, p, 0);
-	else if(p->flags &FW_STRUCT)
-	  resolve_struct(run, p, 1);
-	else if(p->flags & FW_POINTER &&
-	   (p->flags & FW_INT || p->flags & FW_CHAR || p->flags & FW_FLOAT))
-	  resolve_pointer(run, p);
-      }
     }
     
-    run->num_params = n_params;
     // the var_die is not freed, because right now, they are stored in funcwatch_param.var_die
     int rc = dwarf_siblingof(run->dwarf_ptr, var_die, &var_die, &err);
     
@@ -297,6 +306,8 @@ void funcwatch_get_params(funcwatch_run *run) {
   if(n_params > 0) {
     run->params = realloc(run->params, run->num_calls*sizeof(void *));
     run->params[run->num_calls-1] = params_to_get;
+  }else{
+    free(params_to_get.data);
   }
 }
 
@@ -304,33 +315,25 @@ void reevaluate_params(funcwatch_run *run){
   // Get the call id
   int call_id = *(int *)vector_last(&(run->call_stack));
   int n_params = 0;
-  funcwatch_param * params_to_get = NULL;
-  // get the parameters by the call id
-  funcwatch_param * params_got = run->params[call_id]; 
-  funcwatch_param * param_got = params_got;
+  Vector params_to_get;
+  vector_init(&params_to_get);
   
-  while(param_got != NULL){
+  // get the parameters by the call id
+  Vector * params_got = get_param_of_call_id(run->params, run->num_params, call_id); 
+
+  for(int param_index = 0; param_index < params_got->size; param_index ++){
+    funcwatch_param * param_got = vector_get(params_got, param_index);
     ++ n_params;
 
-    funcwatch_param *p = params_to_get;
-    if(params_to_get == NULL) {
-      params_to_get = (funcwatch_param *) malloc(sizeof(funcwatch_param));
-      params_to_get->next = NULL;
-      p = params_to_get;
-    }
-    else {
-      p = get_end_of_list(p);
-      p->next = (funcwatch_param *) malloc(sizeof(funcwatch_param));
-      p = p->next;
-      p->next = NULL;
-    }
+    funcwatch_param *p = (funcwatch_param *) malloc(sizeof(funcwatch_param));
+    funcwatch_param_initialize(p);
+    vector_append(&params_to_get, p);
+    
     p->name = param_got->name;
     p->func_name = run->func_name;
     p->call_num = call_id;
     
-    p->struct_level = 0;
     p->var_die = param_got->var_die;
-    p->next = NULL;
     p->type_die = param_got->type_die;
     p->flags = param_got->flags;
     p->type = param_got->type;
@@ -340,15 +343,14 @@ void reevaluate_params(funcwatch_run *run){
     p->addr = param_got->addr;
     
     if( !(p->flags & FW_INVALID) ){
-      if(p->flags & FW_ENUM)
-	resolve_enum(run, p);
+      if(p->flags & FW_POINTER)
+	p = resolve_pointer(run, p);
+      else if(p->flags & FW_ENUM)
+	p = resolve_enum(run, p);
       else if(p->flags & FW_UNION)
-	resolve_struct(run, p, 0);
+	p = resolve_struct(run, p, 0);
       else if(p->flags &FW_STRUCT)
-	resolve_struct(run, p, 1);
-      else if(p->flags & FW_POINTER &&
-	      (p->flags & FW_INT || p->flags & FW_CHAR || p->flags & FW_FLOAT))
-	resolve_pointer(run, p);
+	p = resolve_struct(run, p, 1);
     }
     
     // go to next parameter
@@ -359,6 +361,8 @@ void reevaluate_params(funcwatch_run *run){
   if(n_params > 0) {
     run->ret_params = realloc(run->ret_params, run->num_rets*sizeof(void *));
     run->ret_params[run->num_rets-1] = params_to_get;
+  }else{
+    free(params_to_get.data);
   }
 }
 
@@ -601,8 +605,7 @@ funcwatch_run *funcwatch_run_program(char *prog_name,  char *func_name, char **a
 			  r->value = tmp;
 			}
 		      }
-		      if(r->flags & FW_POINTER &&
-			 (r->flags & FW_INT || r->flags & FW_CHAR || r->flags & FW_FLOAT))
+		      if(r->flags & FW_POINTER)
 			resolve_pointer(run, r);
 		      else if(r->flags & FW_ENUM)
 			resolve_enum(run, r);
@@ -644,8 +647,7 @@ funcwatch_run *funcwatch_run_program(char *prog_name,  char *func_name, char **a
       }
 
       // check the next source file
-      rc=dwarf_next_cu_header(
-			      run->dwarf_ptr,NULL,NULL,NULL,NULL,&next_cu_header, &err);
+      rc=dwarf_next_cu_header(run->dwarf_ptr,NULL,NULL,NULL,NULL,&next_cu_header, &err);
       if(rc != DW_DLV_OK) // either out of entries or something's wrong
 	break;
     } // end source file loop
@@ -657,25 +659,48 @@ funcwatch_run *funcwatch_run_program(char *prog_name,  char *func_name, char **a
   return run;
 }
 
-/*
- * for int*, char* pointers, this function allocate a local memory block, and transfer the data from 
- * the remote process (target function) to the local memory block.
- * the pointer's value is the address of the local memory block.
- */
-static void resolve_pointer(funcwatch_run *run, funcwatch_param *p) {
-  if(!(p->flags & FW_POINTER)){
-    debug_printf("Warning: param %s is not a pointer. It does not need to be resolved as a pointer.\n", p->name);
-    return;
-  }
-
+static funcwatch_param *resolve_pointer(funcwatch_run *run, funcwatch_param *p) {
   if(p->value == 0){
-    debug_printf("Warning: pointer %s 's value is 0. Either its value is not set properly or it is a null pointer.\n", p->name);
-    return;
+    // NULL pointer, do not need to resolve.
+    // return the current p
+    return p;
   }
 
+  
   long rc = 0;
   void * address = (void *) p->value;
-  //debug_printf("%s: %p\n", p->name, address);
+  funcwatch_param *pointee = (funcwatch_param *)malloc(sizeof(funcwatch_param));
+  funcwatch_param_initialize(pointee);
+
+  p->next = pointee;
+  pointee->name = malloc(strlen(p->name) + 2);
+  pointee->name[0] = '*';
+  strcpy(&(pointee->name[1]), p->name);
+  pointee->name[strlen(p->name) + 1] = '\0';
+  pointee->func_name = strcpy_deep(p->func_name);
+  pointee->call_num = p->call_num;
+  pointee->addr = p->value;
+  
+  get_type_info_from_parent_type_die(run->dwarf_ptr, p->type_die, pointee);
+  get_value_from_remote_process_inner(pointee, run->child_pid);
+
+  funcwatch_param *lastEvolvedParam = pointee;
+  if(pointee->flags & FW_POINTER)
+    lastEvolvedParam = resolve_pointer(run, pointee);
+  else if(pointee->flags & FW_ENUM)
+    lastEvolvedParam = resolve_enum(run, pointee);
+  else if(pointee->flags & FW_UNION)
+    lastEvolvedParam = resolve_struct(run, pointee, 0);
+  else if(pointee->flags &FW_STRUCT)
+    lastEvolvedParam = resolve_struct(run, pointee, 1);
+  return lastEvolvedParam;
+   
+  /*
+   * for int*, char* pointers, this function allocate a local memory block, and transfer the data from 
+   * the remote process (target function) to the local memory block.
+   * the pointer's value is the address of the local memory block.
+   */
+  /* 
   if(p->flags & FW_INT || p->flags & FW_FLOAT) { 
     struct iovec liovec, riovec;
     p->value = (long) malloc(p->size);
@@ -687,7 +712,7 @@ static void resolve_pointer(funcwatch_run *run, funcwatch_param *p) {
     if(rc != p->size) {
       debug_printf("Error resolving pointer for variable %s:%s\n", p->name, strerror(errno));
     }
-
+    
     if(p->flags & FW_SIGNED){
       if(p->size == 2 && p->flags & FW_INT){
 	short *ptr = (short *)p->value;
@@ -763,18 +788,19 @@ static void resolve_pointer(funcwatch_run *run, funcwatch_param *p) {
     p->flags |= FW_INVALID;
     return;
   }
+  */
 }
 
 /*
- * resolve_struct: if it's true, then resolve pointers, struct pointers, enum pointers, etc.
- *                  if it's false, then do not resolve any pointers
- *                  this indicator helps when we meet a union.
- *                  inside a union, we are not sure whether a pointer is valid or not.
+ * is_resolve_pointer: 
+ *   if it's true, then resolve pointers, struct pointers, enum pointers, etc.
+ *   if it's false, then do not resolve any pointers
+ * this indicator helps when we meet a union.
+ * inside a union, we are not sure whether a pointer is valid or not.
  */
-static void resolve_struct(funcwatch_run *run, funcwatch_param *p, int is_resolve_pointer) {
+static funcwatch_param *resolve_struct(funcwatch_run *run, funcwatch_param *p, int is_resolve_pointer) {
   int level = p->struct_level;
   funcwatch_param *tmp = p;
-  funcwatch_param *olddebug = p;
   Dwarf_Die child_die;
   Dwarf_Error err;
   int rc = 0;
@@ -799,14 +825,14 @@ static void resolve_struct(funcwatch_run *run, funcwatch_param *p, int is_resolv
   void *struct_base = non_pointer->addr;
   if(struct_base == 0){
     debug_printf("Info: %s\n","NULL struct pointers");
-    return;
+    return p;
   }
   
   while(1) {
     tmp->next = malloc(sizeof(funcwatch_param));
-    olddebug = tmp;
     tmp = tmp->next;
-    tmp->next = NULL;
+    funcwatch_param_initialize(tmp);
+    
     char *var_name;
     Dwarf_Attribute attr;  
     dwarf_diename(child_die, &var_name, &err);
@@ -849,7 +875,7 @@ static void resolve_struct(funcwatch_run *run, funcwatch_param *p, int is_resolv
       else if(tmp->flags & FW_UNION && !(tmp->flags & FW_POINTER))
 	tmp->value = tmp->addr; // if tmp is a union, we need the addr to resolve.
       else
-	get_value_from_remote_process(tmp, run->child_pid, tmp->addr);
+	get_value_from_remote_process_inner(tmp, run->child_pid);
       
       if(tmp->flags & FW_POINTER && (!is_resolve_pointer))
 	tmp->value = 0;
@@ -893,20 +919,18 @@ static void resolve_struct(funcwatch_run *run, funcwatch_param *p, int is_resolv
     rc=dwarf_siblingof_b(run->dwarf_ptr, child_die, b, &child_die, &err);
     if (rc == DW_DLV_NO_ENTRY) {
       // done
-      return;
+      return tmp;
     }
     else if(rc !=DW_DLV_OK) {
       debug_printf("Error:%s\n", dwarf_errmsg(err));
       exit(-1);
     }
   } // end child loop
+  
+  return p; //BUG!!!!!!!!!!!!!!!!!TBC
 }
 
-/*
- * if it is a enum pointer, we remove the pointer flag from the parameter
- * assign the value of enum directly to the parameter
- */
-void resolve_enum(funcwatch_run *run, funcwatch_param *p) {
+funcwatch_param *resolve_enum(funcwatch_run *run, funcwatch_param *p) {
   Dwarf_Die child_die;
   Dwarf_Error err;
   int rc=dwarf_child(p->type_die, &child_die, &err);
@@ -915,15 +939,23 @@ void resolve_enum(funcwatch_run *run, funcwatch_param *p) {
     exit(-1);
   }
   long p_value = p->value;
+  
+  /*
+   * if it is a enum pointer, we remove the pointer flag from the parameter
+   * assign the value of enum directly to the parameter
+   */
+  /*
   if(p->flags & FW_POINTER){
     if( p->value != 0){
-      get_value_from_remote_process(p, run->child_pid, (void *)p->value);
+      get_value_from_remote_process_inner(p, run->child_pid);
+      
       p->flags &= ~FW_POINTER;
     }else{
       debug_printf("Info: %s\n", "NULL enum pointer.");
-      return;
+      return p;
     }
   }
+  */
   
   while(1) {
     char *var_name;
@@ -942,7 +974,7 @@ void resolve_enum(funcwatch_run *run, funcwatch_param *p) {
     if (rc == DW_DLV_NO_ENTRY) {
       //debug_printf("Warning: unable to resolve enum %s for variable %s\n", p->type, p->name);
       p->value = (long) "<invalid>";
-      return;
+      return p;  // TBC
     }
   } // end child loop
 }

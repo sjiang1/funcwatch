@@ -67,7 +67,7 @@ DynString output_logged_values_inner(funcwatch_run *run){
     
     if(hasReturn){
       // print return
-      funcwatch_param *r = get_return_of_call_id(run->return_values, run->num_rets, curr_call_id, 0);
+      funcwatch_param *r = get_return_of_call_id(run->return_values, run->num_rets, curr_call_id);
       DynString str = print_param_list(r, 1);
       dynstring_append(&toPrint, str.text);
       dynstring_inner_free(str);
@@ -75,7 +75,7 @@ DynString output_logged_values_inner(funcwatch_run *run){
     
     if(hasParams){
       // print parameters values when function returns
-      Vector *ret_p = get_param_of_call_id(run->ret_params, run->num_calls, curr_call_id, 1);
+      Vector *ret_p = get_param_of_call_id(run->ret_params, run->num_calls, curr_call_id);
       DynString str = print_param_vector(*ret_p, 1);
       dynstring_append(&toPrint, str.text);
       dynstring_inner_free(str);
@@ -83,30 +83,6 @@ DynString output_logged_values_inner(funcwatch_run *run){
   }
 
   return toPrint;
-}
-
-Vector *get_param_of_call_id(Vector *variables, int variables_length, int call_id, int ref){
-  for(int i =0; i< variables_length; i++){
-    Vector *vector = variables + i;
-    if(vector->size > 0){
-      funcwatch_param *variable = vector_get(vector, 0);
-      if(variable->call_num == call_id){
-	return vector;
-      }
-    }
-  }
-  return NULL;
-}
-
-funcwatch_param *get_return_of_call_id(funcwatch_param *variables, int variables_length, int call_id, int ref){
-  for(int i =0; i< variables_length; i++){
-    funcwatch_param *variable = variables + i;
-    
-    if(variable->call_num == call_id){
-      return variable;
-    }
-  }
-  return NULL;
 }
 
 DynString print_param_list(funcwatch_param *p, int is_return){
