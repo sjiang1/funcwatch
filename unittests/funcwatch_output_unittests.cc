@@ -451,12 +451,8 @@ TEST(PrintParamVectorTest, TwoItemsVector){
 void initialize_funcwatch_run(funcwatch_run * run){
   run->prog_name = "XProgram";
   run->func_name = "XFunction";
-  run->params = NULL;
-  run->ret_params = NULL;
-  run->return_values = NULL;
   run->num_calls = 0;
   run->num_rets = 0;
-  run->num_params = 0;
 }
 
 TEST(OutputLoggedValuesTest, EmptyRun){
@@ -474,11 +470,10 @@ TEST(OutputLoggedValuesTest, OneEmptyCallRun){
   vector_init(&params);
   vector_init(&ret_params);
   
-  run.params = &params;
-  run.ret_params = &ret_params;
+  run.params[0] = params;
+  run.ret_params[0] = ret_params;
   run.num_calls = 1;
   run.num_rets = 0;
-  run.num_params = 0;
   
   DynString stringToPrint = output_logged_values_inner(&run);
   char *expected_print = "";
@@ -561,11 +556,10 @@ TEST(OutputLoggedValuesTest, OneTwoParamCallRun){
   ret_p1.next = &ret_p2;
   vector_append(&ret_params, &ret_p1);
 
-  run.params = &params;
-  run.ret_params = &ret_params;
+  run.params[0] = params;
+  run.ret_params[0] = ret_params;
   run.num_calls = 1;
   run.num_rets = 0;
-  run.num_params = 0;
   
   DynString stringToPrint = output_logged_values_inner(&run);
   char *expected_print = "0, (null), 0, param1, 0, 00000000000000000000000000000000, (null), no flag to identify the type\n0, printParamTest, 0, param2, 4, 00000000000000000000000000001000, *, [memory addr]\n0, printParamTest, 0, param2.1, 4, 00000000000000000000000000001000, *, null\n1, (null), 0, param1, 0, 00000000000000000000000000000000, (null), no flag to identify the type\n1, printParamTest, 0, param2, 4, 00000000000000000000000000001000, *, [memory addr]\n1, printParamTest, 0, param2.1, 4, 00000000000000000000000000001000, *, [memory addr]\n";

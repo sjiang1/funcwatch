@@ -11,6 +11,7 @@
 #include "vector.h"
 
 #define DEBUG 1
+#define MAX_CALL_CNT 100
 
 typedef struct user_regs_struct user_regs_struct;
 typedef struct user_fpregs_struct user_fpregs_struct;
@@ -46,7 +47,7 @@ struct funcwatch_param{
   /*--value-related--*/
   Dwarf_Addr addr;
   uint64_t value;
-  double value_float;
+  long double value_float;
   /*-----------------*/
   
   // the level of this param in a struct OR union param
@@ -77,12 +78,11 @@ typedef struct {
 
    * Each list contains all the values that compose a parameter
    */
-  Vector *params; 
-  Vector *ret_params;
-  funcwatch_param *return_values;
+  Vector params[MAX_CALL_CNT]; 
+  Vector ret_params[MAX_CALL_CNT];
+  funcwatch_param return_values[MAX_CALL_CNT];
   int num_calls; // every time the num_calls increases, there will be new params added to params
   int num_rets;  // the number of calls that have been returned. every time the num_rets increases, there should be new returns added to ret_params and return_values
-  int num_params;
   
   /* 
    * The following fields should be discarded 

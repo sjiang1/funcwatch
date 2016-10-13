@@ -193,10 +193,20 @@ DynString print_param(funcwatch_param *p, int is_return) {
   }
   else if(p->flags & FW_FLOAT) {
     // float
-    float value = 0;
-    memcpy(&value, &p->value_float, sizeof(float));
-    snprintf(buffer, bufferSize, " %f\n", value);
-    dynstring_append(&paramString, buffer);
+    if( p->size == sizeof(float) ){
+      float value = 0;
+      memcpy(&value, &p->value, sizeof(float));
+      snprintf(buffer, bufferSize, " %f\n", value);
+      dynstring_append(&paramString, buffer);
+    }else if( p->size == sizeof(double) ){
+      double value = 0;
+      memcpy(&value, &p->value_float, sizeof(double));
+      snprintf(buffer, bufferSize, " %f\n", value);
+      dynstring_append(&paramString, buffer);
+    }else if( p->size == sizeof(long double) ){
+      snprintf(buffer, bufferSize, " %f\n", p->value_float);
+      dynstring_append(&paramString, buffer);
+    }
   }
   else if(p->flags & FW_ENUM){
     // enum

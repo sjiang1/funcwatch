@@ -176,11 +176,9 @@ void get_value_from_remote_process_inner(funcwatch_param *param, pid_t pid){
       long *tmpptr = (long *)&d_data;
       memcpy(tmpptr, &first, sizeof(first));
       memcpy(tmpptr+1, &second, sizeof(second));
-      // our value space is 4 bytes, cast double to float
-      debug_printf("Warning: %s\n", "casting a double to a float, potential data loss.");
-      float tmpdata = (float)d_data;
-      float *value_ptr = (float *)&(param->value);
-      *value_ptr = tmpdata;
+      param->value_float = 0;
+      double *value_ptr = &(param->value_float);
+      memcpy(value_ptr, &d_data, sizeof(double));
     }
     else if(param->size == sizeof(long double)){
       long first = ptrace(PTRACE_PEEKDATA, pid, remote_address, 0);
@@ -191,11 +189,7 @@ void get_value_from_remote_process_inner(funcwatch_param *param, pid_t pid){
       memcpy(tmpptr, &first, sizeof(first));
       memcpy(tmpptr+1, &second, sizeof(second));
       memcpy(tmpptr+2, &third, sizeof(third));
-      // our value space is 4 bytes, cast long double to float
-      debug_printf("Warning: %s\n", "casting a long double to a float, potential data loss.");
-      float tmpdata = (float) ld_data;
-      float *value_ptr = (float *)&(param->value);
-      *value_ptr = tmpdata;
+      param->value_float = ld_data;
     }
     else {
       debug_printf("Warning: unsupported float size: %zu", param->size);
@@ -254,7 +248,6 @@ void funcwatch_get_params(funcwatch_run *run) {
       ++ n_params;
       funcwatch_param *p = (funcwatch_param *) malloc(sizeof(funcwatch_param));
       vector_append(&params_to_get, p);
-      run->num_params = run->num_params + 1;
       
       funcwatch_param_initialize(p);
       p->name = var_name;
@@ -304,7 +297,6 @@ void funcwatch_get_params(funcwatch_run *run) {
   }
 
   if(n_params > 0) {
-    run->params = realloc(run->params, run->num_calls*sizeof(void *));
     run->params[run->num_calls-1] = params_to_get;
   }else{
     free(params_to_get.data);
@@ -319,7 +311,7 @@ void reevaluate_params(funcwatch_run *run){
   vector_init(&params_to_get);
   
   // get the parameters by the call id
-  Vector * params_got = get_param_of_call_id(run->params, run->num_params, call_id); 
+  Vector * params_got = get_param_of_call_id(run->params, run->num_calls, call_id); 
 
   for(int param_index = 0; param_index < params_got->size; param_index ++){
     funcwatch_param * param_got = vector_get(params_got, param_index);
@@ -359,7 +351,6 @@ void reevaluate_params(funcwatch_run *run){
   
   // 
   if(n_params > 0) {
-    run->ret_params = realloc(run->ret_params, run->num_rets*sizeof(void *));
     run->ret_params[run->num_rets-1] = params_to_get;
   }else{
     free(params_to_get.data);
@@ -374,6 +365,7 @@ funcwatch_run *funcwatch_run_program(char *prog_name,  char *func_name, char **a
   vector_init(&(run->call_stack));
   run->prog_name = prog_name;
   run->func_name = func_name;
+  
   Dwarf_Error err;
   run->fd = open(run->prog_name, O_RDONLY);
   if(run->fd < 0) {
@@ -565,6 +557,9 @@ funcwatch_run *funcwatch_run_program(char *prog_name,  char *func_name, char **a
 		//rc = ptrace(PTRACE_GETREGS, run->child_pid, 0, &registers);
 		if(get_instruction_pointer(&registers) == address) {
 		  ++run->num_calls;
+		  if(run->num_calls >= MAX_CALL_CNT){
+		    exit(0);
+		  }
 		  int *call_id = (int *)malloc(sizeof(int));
 		  *call_id = run->num_calls - 1;
 		  vector_append(&(run->call_stack), call_id);
@@ -572,6 +567,9 @@ funcwatch_run *funcwatch_run_program(char *prog_name,  char *func_name, char **a
 		}
 		else { // get the return value for this run
 		  ++run->num_rets;
+		  if(run->num_rets >= MAX_CALL_CNT){
+		    exit(0);
+		  }
 		  
 		  // this cannot be moved to after getting the return value
 		  // in getting the return values,
@@ -581,7 +579,6 @@ funcwatch_run *funcwatch_run_program(char *prog_name,  char *func_name, char **a
 		  Dwarf_Bool b;
 		  dwarf_hasattr(run->function_die, DW_AT_type, &b, &err);
 		  if(b) {
-		    run->return_values = realloc(run->return_values, sizeof(funcwatch_param)*run->num_rets);
 		    funcwatch_param *r = run->return_values+run->num_rets-1;
 		    r->name = "$return_value";
 		    r->func_name = run->func_name;
@@ -592,7 +589,7 @@ funcwatch_run *funcwatch_run_program(char *prog_name,  char *func_name, char **a
 		    r->struct_level = 0;
 		    get_type_info_from_var_die(run->dwarf_ptr, run->function_die, r);
 		    if(! (r->flags & FW_INVALID)){ 
-		      if(r->flags & FW_FLOAT) {
+		      if(r->flags & FW_FLOAT && r->size > sizeof(long int)) {
 			r->value = get_return_register_float(&fpregisters);
 		      }
 		      else{

@@ -14,9 +14,11 @@ return i * j;
 }
 
 float foo_float(float i, float j) {
-printf("foo_float: i: %g, address: %p\n", i, &i);
-printf("foo_float: j: %g, address: %p\n", j, &j); 
-return i*j; 
+  printf("foo_float: i: %g, address: %p\n", i, &i);
+  printf("foo_float: j: %g, address: %p\n", j, &j);
+  float ret =  i*j;
+  printf("foo_float: ret: %g\n", ret); 
+  return ret; 
 }
 void * foo_ptr(long i, long j) { 
 printf("foo_ptr: i: %ld, address: %p\n", i, &i);
@@ -46,25 +48,27 @@ return f;
 
 
 int main(int argc, char *argv[]) {
-printf("%d args:\n", argc-1);
-for(int i = 1; i < argc; ++i)
-printf("arg %d:%s\n", i, argv[i]);
-//printf("In main. Pid:%d\n", getpid());
-struct my_struct f;
-my_enum e = a;
-for(long i = 0; i < 5; ++i) {
-foo(i, i+1);
-foo_float(i, i+1);
-foo_ptr(i, i+1);
-foo_str(i, i+1);
-f.i = i+1;
-f.j = i+1;
-foo_struct(&f);
-foo_short(i, i+1);
-foo_enum(e);
-}
-
-return 0;
+  printf("%d args:\n", argc-1);
+  for(int i = 1; i < argc; ++i)
+    printf("arg %d:%s\n", i, argv[i]);
+  
+  //printf("In main. Pid:%d\n", getpid());
+  struct my_struct f;
+  my_enum e = a;
+  
+  for(long i = 0; i < 5; ++i) {
+    foo(i, i+1);
+    foo_float(i, i+1);
+    foo_ptr(i, i+1);
+    foo_str(i, i+1);
+    f.i = i+1;
+    f.j = i+1;
+    foo_struct(&f);
+    foo_short(i, i+1);
+    foo_enum(e);
+  }
+  
+  return 0;
 
 }
 
