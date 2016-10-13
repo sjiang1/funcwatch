@@ -160,6 +160,10 @@ DynString print_param(funcwatch_param *p, int is_return) {
     snprintf(buffer, bufferSize, " %s\n", "null");
     dynstring_append(&paramString, buffer);
   }
+  else if(p->flags & FW_POINTER && p->flags & FW_CHAR){
+    snprintf(buffer, bufferSize, " %s\n", p->value);
+    dynstring_append(&paramString, buffer);
+  }
   else if(p->flags & FW_POINTER){
     // non-null pointers
     snprintf(buffer, bufferSize, " %s\n", "[memory addr]");
