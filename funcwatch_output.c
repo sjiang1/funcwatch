@@ -156,7 +156,7 @@ DynString print_param(funcwatch_param *p, int is_return) {
   // print parameter value
   if(p->type != NULL &&
      (strcmp(p->type, "unsupported")==0 || (p->flags & FW_INVALID))){
-    snprintf(buffer, bufferSize, " unsupported value\n");
+    snprintf(buffer, bufferSize, " [invalid]\n");
     dynstring_append(&paramString, buffer);
   }
   else if((p->flags & FW_POINTER) && (p->value == 0)){
@@ -183,7 +183,8 @@ DynString print_param(funcwatch_param *p, int is_return) {
       int32_t val = 0;
       memcpy(&val, &(p->value), sizeof(int32_t));
       snprintf(buffer, bufferSize, " %0" STR(11) PRId32  "\n", val);
-    }else if(p->size == 8){
+    }else{
+      // default behavior
       int64_t val = 0;
       memcpy(&val, &(p->value), sizeof(int64_t));
       snprintf(buffer, bufferSize, " %0" STR(20) PRId64 "\n", val);
@@ -200,7 +201,8 @@ DynString print_param(funcwatch_param *p, int is_return) {
       uint32_t val = 0;
       memcpy(&val, &(p->value), sizeof(uint32_t));
       snprintf(buffer, bufferSize, " %0" STR(10) PRIu32 "\n", val);
-    }else if(p->size == 8){
+    }else {
+      // default behavior
       uint64_t val = 0;
       memcpy(&val, &(p->value), sizeof(uint64_t));
       snprintf(buffer, bufferSize, " %0" STR(20) PRIu64 "\n", val);
@@ -233,7 +235,8 @@ DynString print_param(funcwatch_param *p, int is_return) {
       memcpy(&value, &p->value_float, sizeof(double));
       snprintf(buffer, bufferSize, " %f\n", value);
       dynstring_append(&paramString, buffer);
-    }else if( p->size == sizeof(long double) ){
+    }else{
+      // default behavior
       snprintf(buffer, bufferSize, " %f\n", p->value_float);
       dynstring_append(&paramString, buffer);
     }

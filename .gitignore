@@ -61,6 +61,9 @@ tests/test_union_0
 tests/test_union_1
 tests/test_recursive_0
 tests/test_float_0
+tests/test_long_double	
+tests/test_typedef_0
+tests/test_typedef_1
 tmp
 unittests/dynstring_unittests
 unittests/funcwatch_output_unittests

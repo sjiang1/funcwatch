@@ -69,7 +69,7 @@ static void get_value(funcwatch_param *p, funcwatch_run *run, Dwarf_Unsigned fbr
 }
 
 /*
- * Get the value from process pid to assigne the value to param
+ * Get the value from process pid to assign the value to param
  * for integer types,
  * we get the raw data to the uint64_t type
 
@@ -155,7 +155,7 @@ void get_value_from_remote_process_inner(funcwatch_param *param, pid_t pid){
       long *tmpptr = (long *)&ld_data;
       memcpy(tmpptr, &first, sizeof(first));
       memcpy(tmpptr+1, &second, sizeof(second));
-      memcpy(tmpptr+2, &third, sizeof(third));
+      memcpy(tmpptr+2, &third, sizeof(long double) - sizeof(first) - sizeof(second));
       param->value_float = ld_data;
     }
     else {
@@ -172,7 +172,9 @@ void get_value_from_remote_process_inner(funcwatch_param *param, pid_t pid){
 
   if(errno != 0) {
     debug_printf("Unable to get variable value: %s\n", strerror(errno));
-    exit(-1);
+    param->value = 0;
+    param->value_float = 0;
+    param->flags |= FW_INVALID;
   }
   else
     return;

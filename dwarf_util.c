@@ -9,26 +9,8 @@ static Dwarf_Unsigned get_size_from_type_die(Dwarf_Die type_die){
   Dwarf_Half tag;
   Dwarf_Error err;
   int rc = DW_DLV_OK;
-
-  Dwarf_Die current_type_die = NULL;
-  rc = dwarf_tag(type_die, &tag, &err);
-  while(tag == DW_TAG_typedef) {
-    rc = dwarf_attr(type_die,DW_AT_type,&attr,&err);
-    if( rc != DW_DLV_OK){
-      debug_printf("Error: cannot get type defined by a %s\n", "typedef");
-      return 0;
-    }
-    rc = dwarf_formudata(attr, &current_type_die, &err);
-    if( rc != DW_DLV_OK){
-      debug_printf("Error: cannot get tag from a %s\n", "type die");
-      return 0;
-    }
-    rc = dwarf_tag(current_type_die, &tag, &err);
-  }
   
-  if(current_type_die == NULL){
-    current_type_die = type_die;
-  }
+  Dwarf_Die current_type_die = type_die;
   
   rc = dwarf_attr(current_type_die,DW_AT_byte_size,&attr,&err);
   if(rc == DW_DLV_OK)
@@ -86,11 +68,17 @@ static char *get_name_from_type_die(Dwarf_Die type_die){
   return type_name;
 }
 
-static void assign_type_flags(Dwarf_Half tag, funcwatch_param *p, Dwarf_Die type_die){
-  if(tag == DW_TAG_typedef){
-    p->flags |= FW_TYPEDEF;
-  }  
-  else if (tag == DW_TAG_pointer_type || tag == DW_TAG_array_type){
+static void assign_type_flags(funcwatch_param *p, Dwarf_Die type_die){
+  Dwarf_Error err;
+  Dwarf_Half tag;
+  int rc = dwarf_tag(type_die, &tag, &err);
+  if (rc != DW_DLV_OK) {
+    debug_printf("Error: %s\n", dwarf_errmsg(err));
+    p->flags |= FW_INVALID;
+    return;
+  }
+
+  if (tag == DW_TAG_pointer_type || tag == DW_TAG_array_type){
     p->flags |= FW_POINTER;
   }
   else if (tag == DW_TAG_structure_type ) {
@@ -103,8 +91,7 @@ static void assign_type_flags(Dwarf_Half tag, funcwatch_param *p, Dwarf_Die type
     p->flags |= FW_UNION;
   }
   else if(tag == DW_TAG_base_type) {
-    int rc = 0;
-    Dwarf_Error err;
+    rc = 0;
     Dwarf_Unsigned encoding;
     Dwarf_Attribute attr;
     rc = dwarf_attr(type_die,DW_AT_encoding,&attr,&err);
@@ -142,24 +129,42 @@ static void get_type_info_from_type_die(Dwarf_Debug dbg, Dwarf_Die type_die, fun
   Dwarf_Attribute attr, attr2;
   int rc = 0;
   Dwarf_Off offset;
-  
-  p->type_die = type_die;
-  
-  p->size = get_size_from_type_die(type_die);
+
+  // for typedef, we use type def names for the type.
   p->type = get_name_from_type_die(type_die);
-  if(p->size <= 0){
-    p->flags |= FW_INVALID;
-    return;
-  }
-  
-  rc = dwarf_tag(type_die, &tag, &err);
-  if (rc != DW_DLV_OK) {
-    debug_printf("Error: %s\n", dwarf_errmsg(err));
-    p->flags |= FW_INVALID;
-    return;
+
+  // the other attributes use the actual types' information
+  Dwarf_Die current_type_die = type_die;
+  rc = dwarf_tag(current_type_die, &tag, &err);
+  while(tag == DW_TAG_typedef) {
+    p->flags |= FW_TYPEDEF;
+    
+    rc = dwarf_attr(type_die,DW_AT_type,&attr,&err);
+    if( rc != DW_DLV_OK){
+      debug_printf("Error: cannot get type defined by a %s\n", "typedef");
+      current_type_die = NULL;
+      break;
+    }
+
+    Dwarf_Off offset;
+    rc = dwarf_global_formref(attr, &offset, &err);
+
+    Dwarf_Die type_die;
+    rc = dwarf_offdie_b(dbg, offset, 1, &current_type_die, &err);
+    
+    /* rc = dwarf_formudata(attr, &current_type_die, &err);
+    if( rc != DW_DLV_OK){
+      debug_printf("Error: cannot get tag from a %s\n", "type die");
+      current_type_die = NULL;
+      break;
+      }*/
+    rc = dwarf_tag(current_type_die, &tag, &err);
   }
 
-  assign_type_flags(tag, p, type_die);
+  p->type_die = current_type_die;
+  p->size = get_size_from_type_die(current_type_die);
+  
+  assign_type_flags(p, current_type_die);
 }
 
 void get_type_info_from_parent_type_die(Dwarf_Debug dbg, Dwarf_Die parent_type_die, funcwatch_param *p){
