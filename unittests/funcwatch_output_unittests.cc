@@ -21,7 +21,7 @@ TEST(PrintParamTest, IntInput){
 
   DynString stringToPrint = print_param(&p, 0);
   char *param_print = stringToPrint.text;
-  char *expected_print = "0, printParamTest, 0, param, 4, 00000000000000000000000000000001, int, 1\n";
+  char *expected_print = "0, printParamTest, 0, param, 4, 00000000000000000000000000000001, int, 0000000001\n";
   ASSERT_STREQ(expected_print, param_print);
   dynstring_inner_free(stringToPrint);
 }
@@ -42,7 +42,7 @@ TEST(PrintParamTest, SignedIntInput){
 
   DynString stringToPrint = print_param(&p, 0);
   char *param_print = stringToPrint.text;
-  char *expected_print = "0, printParamTest, 0, param, 4, 00000000000000000000000100000001, int, -1\n";
+  char *expected_print = "0, printParamTest, 0, param, 4, 00000000000000000000000100000001, int, -0000000001\n";
   ASSERT_STREQ(expected_print, param_print);
   dynstring_inner_free(stringToPrint);
 }
@@ -198,7 +198,7 @@ TEST(PrintParamTest, FloatInput){
   p.size = sizeof(float);
   p.addr = (Dwarf_Addr)(void *)&p;
   float value = 123.12345678;
-  memcpy(&p.value_float, &value, sizeof(float));
+  memcpy(&p.value, &value, sizeof(float));
   p.flags |= FW_FLOAT;
 
   DynString stringToPrint = print_param(&p, 0);
