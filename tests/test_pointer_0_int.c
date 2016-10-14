@@ -12,6 +12,7 @@ FILE * fp;
 int foo(int *parameter_1){
   //printf("Parameter address: %p\n", &parameter_1);
   fprintf(fp, "foo, 0, parameter_1, %zu, ?, int *, %d\n", sizeof(parameter_1), *parameter_1);
+  *parameter_1 = 10;
   return parameter_1;
 }
 

@@ -71,9 +71,7 @@ static void get_value(funcwatch_param *p, funcwatch_run *run, Dwarf_Unsigned fbr
 /*
  * Get the value from process pid to assigne the value to param
  * for integer types,
- *     for signed/unsigned short, int types, we type cast here, and get a signed long
- *     for the types that are larger than long, we type cast here, and get a signed or unsigned long
- *     for long type, we pass the data as it is
+ * we get the raw data to the uint64_t type
 
  * for pointer type, we pass the data as it is
  * for char type, we assigne char value into &param->value
@@ -106,22 +104,11 @@ void get_value_from_remote_process_inner(funcwatch_param *param, pid_t pid){
   }
   else if(param->flags & FW_INT) {
     switch(param->size) {
-    case 2 : {
-      long tmpdata = ptrace(PTRACE_PEEKDATA, pid,  remote_address, 0);
-      if(param->flags & FW_SIGNED) {
-	short *tmpptr = (short *)&tmpdata;
-	short tmpvalue = *tmpptr;
-        param->value = (long) tmpvalue;
-      }
-      else {
-	unsigned short *tmpptr = (unsigned short *)&tmpdata;
-	unsigned short tmpvalue = *tmpptr;
-        param->value = (long) tmpvalue;
-      }
-      break;
-    }
+    case 2 :
     case 4 : {
-      param->value = ptrace(PTRACE_PEEKDATA, pid,  remote_address, 0);
+      long tmpdata = ptrace(PTRACE_PEEKDATA, pid,  remote_address, 0);
+      long *valueptr = (long *)&(param->value);
+      memcpy(valueptr, &tmpdata, sizeof(long));
       break;
     }
     case 8 : {
@@ -130,21 +117,9 @@ void get_value_from_remote_process_inner(funcwatch_param *param, pid_t pid){
       first = ptrace(PTRACE_PEEKDATA, pid, remote_address, 0);
       second = ptrace(PTRACE_PEEKDATA, pid, remote_address+sizeof(long), 0);
       
-      if(param->flags & FW_SIGNED){
-	int64_t data64 = 0;
-	long *tmpptr = (long *)&data64;
-	memcpy(tmpptr, &first, sizeof(first));
-	memcpy(tmpptr+1, &second, sizeof(second));
-	param->value = (int32_t) data64;
-      }
-      else {
-	uint64_t data64 = 0;
-	long *tmpptr = (long *)&data64;
-	memcpy(tmpptr, &first, sizeof(first));
-	memcpy(tmpptr+1, &second, sizeof(second));
-	param->value = (uint32_t) data64;
-      }
-      debug_printf("Warning: %s\n", "cast 8 byte int to 4 byte int. potential data loss.");
+      long *tmpptr = (long *)&(param->value);
+      memcpy(tmpptr, &first, sizeof(first));
+      memcpy(tmpptr+1, &second, sizeof(second));      
       break;
     }
     default:
@@ -156,16 +131,7 @@ void get_value_from_remote_process_inner(funcwatch_param *param, pid_t pid){
   } // end ints
   else if(param->flags & FW_CHAR){
     long tmpdata = ptrace(PTRACE_PEEKDATA, pid, remote_address, 0);
-    param->value = 0;
-    if(param->flags &FW_SIGNED){
-      char *tmpptr = (char *)&tmpdata;
-      char *tmpptr_dest = (char *)&(param->value);
-      *tmpptr_dest = *tmpptr;
-    }else{
-      unsigned char *tmpptr = (unsigned char *)&tmpdata;
-      unsigned char *tmpptr_dest = (unsigned char *)&(param->value);
-      *tmpptr_dest = *tmpptr;
-    }
+    param->value = tmpdata;
   }
   else if(param->flags & FW_FLOAT) {
     if(param->size == sizeof(float))
@@ -846,12 +812,14 @@ static funcwatch_param *resolve_struct(funcwatch_run *run, funcwatch_param *p, i
     exit(-1);
   }  
 
+  /*
   funcwatch_param *non_pointer = getFirstNonPointer(p);
   void *struct_base = non_pointer->addr;
   if(struct_base == 0){
     debug_printf("Info: %s\n","NULL struct pointers");
     return p;
-  }
+    }*/
+  void *struct_base = p->addr;
   
   while(1) {
     tmp->next = malloc(sizeof(funcwatch_param));
@@ -902,17 +870,14 @@ static funcwatch_param *resolve_struct(funcwatch_run *run, funcwatch_param *p, i
       else
 	get_value_from_remote_process_inner(tmp, run->child_pid);
       
-      if(tmp->flags & FW_POINTER && (!is_resolve_pointer))
-	tmp->value = 0;
-
       //debug_printf("var_name: %s\n", var_name);
       if(tmp->flags & FW_POINTER && tmp->flags & FW_CHAR && is_resolve_pointer ) {
 	resolve_string(run, tmp);
+	tmp = get_end_of_list(tmp);
       }
-      else if(tmp->flags & FW_POINTER
-	 && (tmp->flags & FW_INT || tmp->flags & FW_CHAR || tmp->flags & FW_FLOAT)
-	 && is_resolve_pointer ) {
+      else if(tmp->flags & FW_POINTER && is_resolve_pointer ) {
 	resolve_pointer(run, tmp);
+	tmp = get_end_of_list(tmp);
       }
       else if(tmp->flags & FW_STRUCT
 	      && (is_resolve_pointer || !(tmp->flags & FW_POINTER))) {
@@ -938,6 +903,7 @@ static funcwatch_param *resolve_struct(funcwatch_run *run, funcwatch_param *p, i
       else if(tmp->flags & FW_ENUM
 	      && (is_resolve_pointer || !(tmp->flags & FW_POINTER))) {
 	resolve_enum(run, tmp);
+	tmp = get_end_of_list(tmp);
       }
     }
     // go to the next member

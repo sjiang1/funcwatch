@@ -42,8 +42,10 @@ float  j;
 struct my_struct * foo_struct(struct my_struct *f) { 
 	printf("foo_struct: f: %p, address:%p\n", f, &f);
 	printf("foo_struct: i: %ld, address: %p\n", f->i, &f->i);
-printf("foo_struct: j: %g, address: %p\n", f->j, &f->j);
-return f; 
+	printf("foo_struct: j: %g, address: %p\n", f->j, &f->j);
+	f->i ++;
+	f->j = f->j + 2;
+	return f; 
 }
 
 
@@ -54,15 +56,15 @@ int main(int argc, char *argv[]) {
   
   //printf("In main. Pid:%d\n", getpid());
   struct my_struct f;
+  f.i = 1;
+  f.j = -0.2;
   my_enum e = a;
   
-  for(long i = 0; i < 5; ++i) {
+  for(long i = -2; i < 3; ++i) {
     foo(i, i+1);
     foo_float(i, i+1);
     foo_ptr(i, i+1);
     foo_str(i, i+1);
-    f.i = i+1;
-    f.j = i+1;
     foo_struct(&f);
     foo_short(i, i+1);
     foo_enum(e);

@@ -3,6 +3,7 @@
 #include "vector.h"
 #include "dynstring.h"
 #include "stringutil.h"
+#include <inttypes.h>
 
 void output_logged_values(FILE *f, funcwatch_run *run){
   if(DEBUG){
@@ -125,6 +126,9 @@ DynString print_param_list_for_return(funcwatch_param *p){
   return print_param_list(p, 1);
 }
 
+#define MAKESTR(x) # x
+#define STR(x) MAKESTR(x)
+
 /*
  * Print format:
  * is_return, function_name, call_id, parameter_name, parameter_size, flags, parameter_type, value, 
@@ -171,27 +175,49 @@ DynString print_param(funcwatch_param *p, int is_return) {
   }
   else if((p->flags & FW_INT) && (p->flags & FW_SIGNED)) {
     // signed int
-    snprintf(buffer, bufferSize, " %ld\n", p->value);
+    if(p->size == 2){
+      short val = 0;
+      memcpy(&val, &(p->value), sizeof(short));
+      snprintf(buffer, bufferSize, " %d\n", val);
+    }else if(p->size == 4){
+      int32_t val = 0;
+      memcpy(&val, &(p->value), sizeof(int32_t));
+      snprintf(buffer, bufferSize, " %0" STR(11) PRId32  "\n", val);
+    }else if(p->size == 8){
+      int64_t val = 0;
+      memcpy(&val, &(p->value), sizeof(int64_t));
+      snprintf(buffer, bufferSize, " %0" STR(20) PRId64 "\n", val);
+    }
     dynstring_append(&paramString, buffer);
   }
   else if(p->flags & FW_INT){
     // unsigned int
-    unsigned long *tmpptr = &(p->value);
-    unsigned long tmpvalue = *tmpptr;
-    snprintf(buffer, bufferSize, " %lu\n", tmpvalue);
+    if(p->size == 2){
+      unsigned short val = 0;
+      memcpy(&val, &(p->value), sizeof(unsigned short));
+      snprintf(buffer, bufferSize, " %hu\n", val);
+    }else if(p->size == 4){
+      uint32_t val = 0;
+      memcpy(&val, &(p->value), sizeof(uint32_t));
+      snprintf(buffer, bufferSize, " %0" STR(10) PRIu32 "\n", val);
+    }else if(p->size == 8){
+      uint64_t val = 0;
+      memcpy(&val, &(p->value), sizeof(uint64_t));
+      snprintf(buffer, bufferSize, " %0" STR(20) PRIu64 "\n", val);
+    }
     dynstring_append(&paramString, buffer);
   }
   else if((p->flags &FW_CHAR) && (p->flags &FW_SIGNED)) {
     // signed char
     char value = 0;
-    memcpy(&value, &p->value, 1);
+    memcpy(&value, &p->value, sizeof(char));
     snprintf(buffer, bufferSize, " %d\n", value);
     dynstring_append(&paramString, buffer);
   }
   else if(p->flags &FW_CHAR){
     // unsigned char
     unsigned char value = 0;
-    memcpy(&value, &p->value, 1);
+    memcpy(&value, &p->value, sizeof(unsigned char));
     snprintf(buffer, bufferSize, " %d\n", value);
     dynstring_append(&paramString, buffer);
   }

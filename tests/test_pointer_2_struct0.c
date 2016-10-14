@@ -20,6 +20,8 @@ int foo(struct struct_type *parameter_1){
   fprintf(fp, "foo, 0, parameter_1, %zu, ?, struct struct_type *, %p\n", sizeof(parameter_1), parameter_1);
   fprintf(fp, "foo, 0, parameter_1.a, %zu, ?, int, %d\n", sizeof(parameter_1->a), parameter_1->a);
   fprintf(fp, "foo, 0, parameter_1.b, %zu, ?, int, %d\n", sizeof(parameter_1->b), parameter_1->b);
+
+  parameter_1->b = 10;
   return parameter_1->a;
 }
 
