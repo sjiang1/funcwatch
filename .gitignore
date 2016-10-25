@@ -64,6 +64,7 @@ tests/test_float_0
 tests/test_long_double	
 tests/test_typedef_0
 tests/test_typedef_1
+tests/test_long_double
 tmp
 unittests/dynstring_unittests
 unittests/funcwatch_output_unittests
