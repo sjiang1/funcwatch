@@ -182,12 +182,14 @@ DynString print_param(funcwatch_param *p, int is_return) {
     }else if(p->size == 4){
       int32_t val = 0;
       memcpy(&val, &(p->value), sizeof(int32_t));
-      snprintf(buffer, bufferSize, " %0" STR(11) PRId32  "\n", val);
+      // snprintf(buffer, bufferSize, " %0" STR(11) PRId32  "\n", val);
+      snprintf(buffer, bufferSize, " %" PRId32  "\n", val);
     }else{
       // default behavior
       int64_t val = 0;
       memcpy(&val, &(p->value), sizeof(int64_t));
-      snprintf(buffer, bufferSize, " %0" STR(20) PRId64 "\n", val);
+      // snprintf(buffer, bufferSize, " %0" STR(20) PRId64 "\n", val);
+      snprintf(buffer, bufferSize, " %" PRId64 "\n", val);
     }
     dynstring_append(&paramString, buffer);
   }
@@ -200,12 +202,12 @@ DynString print_param(funcwatch_param *p, int is_return) {
     }else if(p->size == 4){
       uint32_t val = 0;
       memcpy(&val, &(p->value), sizeof(uint32_t));
-      snprintf(buffer, bufferSize, " %0" STR(10) PRIu32 "\n", val);
+      snprintf(buffer, bufferSize, " %" PRIu32 "\n", val);
     }else {
       // default behavior
       uint64_t val = 0;
       memcpy(&val, &(p->value), sizeof(uint64_t));
-      snprintf(buffer, bufferSize, " %0" STR(20) PRIu64 "\n", val);
+      snprintf(buffer, bufferSize, " %" PRIu64 "\n", val);
     }
     dynstring_append(&paramString, buffer);
   }

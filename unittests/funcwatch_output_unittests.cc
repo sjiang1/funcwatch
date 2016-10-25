@@ -21,7 +21,7 @@ TEST(PrintParamTest, IntInput){
 
   DynString stringToPrint = print_param(&p, 0);
   char *param_print = stringToPrint.text;
-  char *expected_print = "0, printParamTest, 0, param, 4, 00000000000000000000000000000001, int, 0000000001\n";
+  char *expected_print = "0, printParamTest, 0, param, 4, 00000000000000000000000000000001, int, 1\n";
   ASSERT_STREQ(expected_print, param_print);
   dynstring_inner_free(stringToPrint);
 }
@@ -42,7 +42,7 @@ TEST(PrintParamTest, SignedIntInput){
 
   DynString stringToPrint = print_param(&p, 0);
   char *param_print = stringToPrint.text;
-  char *expected_print = "0, printParamTest, 0, param, 4, 00000000000000000000000100000001, int, -0000000001\n";
+  char *expected_print = "0, printParamTest, 0, param, 4, 00000000000000000000000100000001, int, -1\n";
   ASSERT_STREQ(expected_print, param_print);
   dynstring_inner_free(stringToPrint);
 }
@@ -81,7 +81,7 @@ TEST(PrintParamTest, UnsupportTypeInput){
 
   DynString stringToPrint = print_param(&p, 0);
   char *param_print = stringToPrint.text;
-  char *expected_print = "0, printParamTest, 0, param, 0, 00000000000000000000000000000000, unsupported, unsupported value\n";
+  char *expected_print = "0, printParamTest, 0, param, 0, 00000000000000000000000000000000, unsupported, [invalid]\n";
   ASSERT_STREQ(expected_print, param_print);
   dynstring_inner_free(stringToPrint);
 }
@@ -101,7 +101,7 @@ TEST(PrintParamTest, InvalidInput){
 
   DynString stringToPrint = print_param(&p, 0);
   char *param_print = stringToPrint.text;
-  char *expected_print = "0, printParamTest, 0, param, 0, 10000000000000000000000000000000, int, unsupported value\n";
+  char *expected_print = "0, printParamTest, 0, param, 0, 10000000000000000000000000000000, int, [invalid]\n";
   ASSERT_STREQ(expected_print, param_print);
   dynstring_inner_free(stringToPrint);
 }
