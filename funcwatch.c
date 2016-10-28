@@ -311,8 +311,6 @@ void reevaluate_params(funcwatch_run *run){
 	p = resolve_string(run, p);
       else if(p->flags & FW_POINTER)
 	p = resolve_pointer(run, p);
-      else if(p->flags & FW_ENUM)
-	p = resolve_enum(run, p);
       else if(p->flags & FW_UNION)
 	p = resolve_struct(run, p, 0);
       else if(p->flags &FW_STRUCT)
