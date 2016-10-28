@@ -763,13 +763,6 @@ static funcwatch_param *resolve_struct(funcwatch_run *run, funcwatch_param *p, i
     exit(-1);
   }  
 
-  /*
-  funcwatch_param *non_pointer = getFirstNonPointer(p);
-  void *struct_base = non_pointer->addr;
-  if(struct_base == 0){
-    debug_printf("Info: %s\n","NULL struct pointers");
-    return p;
-    }*/
   void *struct_base = p->addr;
   
   while(1) {
@@ -780,12 +773,20 @@ static funcwatch_param *resolve_struct(funcwatch_run *run, funcwatch_param *p, i
     char *var_name;
     Dwarf_Attribute attr;  
     dwarf_diename(child_die, &var_name, &err);
-    
+
     long len = strlen(var_name)+strlen(p->name)+2;
     tmp->name = (char *) malloc(len);
-    strcpy(tmp->name, p->name);
-    tmp->name[strlen(p->name)] = '.';
+    if (p->name[0] == '*'){
+      strcpy(tmp->name, p->name+1);
+      tmp->name[strlen(p->name)-1] = '-';
+      tmp->name[strlen(p->name)] = '>';  
+    }else{
+      strcpy(tmp->name, p->name);
+      tmp->name[strlen(p->name)] = '.';
+    }
     strcpy(tmp->name+1+strlen(p->name), var_name);
+
+    
     tmp->func_name = p->func_name;
     tmp->call_num = p->call_num;
     tmp->value = 0;
