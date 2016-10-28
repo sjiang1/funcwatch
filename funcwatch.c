@@ -331,14 +331,22 @@ void reevaluate_params(funcwatch_run *run){
   }
 }
 
-funcwatch_run *funcwatch_run_program(char *prog_name,  char *func_name, char **argv)
-{
-  funcwatch_run *run = malloc(sizeof(funcwatch_run));
+void initialize_funcwatch_run(funcwatch_run *run, char *prog_name, char *func_name){
   run->num_calls = 0;
   run->num_rets = 0;
   vector_init(&(run->call_stack));
   run->prog_name = prog_name;
   run->func_name = func_name;
+  for (int i = 0; i < MAX_CALL_CNT; i++){
+    funcwatch_param *p = (run->return_values) + i;
+    p->call_num = -1;
+  }
+}
+
+funcwatch_run *funcwatch_run_program(char *prog_name,  char *func_name, char **argv)
+{
+  funcwatch_run *run = malloc(sizeof(funcwatch_run));
+  initialize_funcwatch_run(run, prog_name, func_name);  
   
   Dwarf_Error err;
   run->fd = open(run->prog_name, O_RDONLY);
