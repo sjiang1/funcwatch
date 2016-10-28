@@ -27,7 +27,7 @@ tests: tests/test \
      tests/test_pointer_4_pointer0 \
      tests/test_union_0 tests/test_union_1 \
      tests/test_recursive_0 \
-     tests/test_float_0 tests/test_typedef_0 tests/test_typedef_1 tests/test_long_double
+     tests/test_float_0 tests/test_typedef_0 tests/test_typedef_1 tests/test_typedef_2 tests/test_long_double
 
 tests/test: 					tests/test.o
 tests/test_struct_0: 				tests/test_struct_0.o
@@ -50,6 +50,7 @@ tests/test_recursive_0:                         tests/test_recursive_0.o
 tests/test_float_0:				tests/test_float_0.o
 tests/test_typedef_0:				tests/test_typedef_0.o
 tests/test_typedef_1:				tests/test_typedef_1.o
+tests/test_typedef_2:				tests/test_typedef_2.o
 tests/test_long_double:				tests/test_long_double.o
 
 unittests: unittests/dynstring_unittests unittests/funcwatch_output_unittests
@@ -75,6 +76,7 @@ clean:
 		tests/test_pointer_0_int tests/test_pointer_1_char tests/test_pointer_2_struct0 tests/test_pointer_3_struct1 \
                 tests/test_pointer_4_pointer0 \
 		tests/test_union_0 tests/test_union_1 \
-                tests/test_recursive_0 tests/test_typedef_0 tests/test_typedef_1 tests/test_long_double \
+                tests/test_recursive_0 tests/test_typedef_0 tests/test_typedef_1 tests/test_typedef_2 \
+		tests/test_long_double \
 		unittests/dynstring_unittests unittests/funcwatch_output_unittests \
 		`find -name \*.o` `find -name \*~`
