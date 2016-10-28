@@ -79,7 +79,8 @@ static void get_value(funcwatch_param *p, funcwatch_run *run, Dwarf_Unsigned fbr
 
  * for floating types,
  *     for float type, we pass the data as it is
- *     for double, long double types, we type cast them to float types, and pass the data as float
+ *     for double, we type cast them to float types, and pass the data as float
+            ## long double types, invalid for now.
  *
  * for struct types ******************
  *     this function does not accept struct types! we do not obtain struct types from remote process
@@ -147,8 +148,9 @@ void get_value_from_remote_process_inner(funcwatch_param *param, pid_t pid){
       double *value_ptr = &(param->value_float);
       memcpy(value_ptr, &d_data, sizeof(double));
     }
-    else if(param->size == sizeof(long double)){
-      long first = ptrace(PTRACE_PEEKDATA, pid, remote_address, 0);
+    else if(param->size == sizeof(long double)){      
+      /*
+	long first = ptrace(PTRACE_PEEKDATA, pid, remote_address, 0);
       long second = ptrace(PTRACE_PEEKDATA, pid, remote_address+sizeof(long), 0);
       long third = ptrace(PTRACE_PEEKDATA, pid, remote_address+2*sizeof(long), 0);
       long double ld_data = 0;
@@ -157,6 +159,8 @@ void get_value_from_remote_process_inner(funcwatch_param *param, pid_t pid){
       memcpy(tmpptr+1, &second, sizeof(second));
       memcpy(tmpptr+2, &third, sizeof(long double) - sizeof(first) - sizeof(second));
       param->value_float = ld_data;
+      */
+      param->flags |= FW_INVALID;
     }
     else {
       debug_printf("Warning: unsupported float size: %zu", param->size);
@@ -568,6 +572,9 @@ funcwatch_run *funcwatch_run_program(char *prog_name,  char *func_name, char **a
 		    r->next = 0;
 		    r->struct_level = 0;
 		    get_type_info_from_var_die(run->dwarf_ptr, run->function_die, r);
+		    if( r->flags & FW_FLOAT && r->size == sizeof(long double)){
+		      r->flags |= FW_INVALID;
+		    }
 		    if(! (r->flags & FW_INVALID)){ 
 		      if(r->flags & FW_FLOAT && r->size > sizeof(long int)) {
 			r->value = get_return_register_float(&fpregisters);
@@ -684,70 +691,6 @@ static funcwatch_param *resolve_string(funcwatch_run *run, funcwatch_param *p){
     p->size = strlen(buf);
     return;
   }
-  
-  /*
-   * for int*, char* pointers, this function allocate a local memory block, and transfer the data from 
-   * the remote process (target function) to the local memory block.
-   * the pointer's value is the address of the local memory block.
-   */
-  /* 
-  if(p->flags & FW_INT || p->flags & FW_FLOAT) { 
-    struct iovec liovec, riovec;
-    p->value = (long) malloc(p->size);
-    liovec.iov_base = (void *) (p->value);
-    liovec.iov_len = p->size;
-    riovec.iov_base = address;
-    riovec.iov_len = p->size;
-    rc = process_vm_readv(run->child_pid, &liovec, 1, &riovec, 1, 0);
-    if(rc != p->size) {
-      debug_printf("Error resolving pointer for variable %s:%s\n", p->name, strerror(errno));
-    }
-    
-    if(p->flags & FW_SIGNED){
-      if(p->size == 2 && p->flags & FW_INT){
-	short *ptr = (short *)p->value;
-	p->value = (long)malloc(sizeof(long));
-	*(long *)(p->value) = *ptr;
-      }else if(p->size ==sizeof(long long) && p->flags & FW_INT){
-	long long *ptr = (long long *)p->value;
-	p->value = (long)malloc(sizeof(long));
-	*(long *)(p->value) = *ptr;
-	debug_printf("Warning: %s\n", "Cast a long long to a long.");
-      }
-    }
-    else{
-      if(p->size == 2 && p->flags & FW_INT){
-	unsigned short *ptr = (unsigned short *)p->value;
-	p->value = (long)malloc(sizeof(long));
-	*(unsigned long *)(p->value) = *ptr;
-      }else if(p->size ==sizeof(long long) && p->flags & FW_INT){
-	unsigned long long *ptr = (unsigned long long *)p->value;
-	p->value = (long)malloc(sizeof(long));
-	*(unsigned long *)(p->value) = *ptr;
-	debug_printf("Warning: %s\n", "Cast an unsigned long long to an unsigned long.");
-      }
-    }
-    
-    if(p->size ==sizeof(double) && p->flags & FW_FLOAT){
-      double *ptr = (double *)p->value;
-      p->value = (long)malloc(sizeof(long));
-      *(float *)(p->value) = *ptr;
-      debug_printf("Warning: %s\n", "Cast a double to a float.");
-    }else if(p->size ==sizeof(long double) && p->flags & FW_FLOAT){
-      long double *ptr = (long double *)p->value;
-      p->value = (long)malloc(sizeof(long));
-      *(float *)(p->value) = *ptr;
-      debug_printf("Warning: %s\n", "Cast a long double to a float.");
-    }
-    return;
-  }
-  
-  else {
-    debug_printf("Error: pointer %s is not going to be resolved.\n", p->value);
-    p->flags |= FW_INVALID;
-    return;
-  }
-  */  
 }
 
 static funcwatch_param *resolve_pointer(funcwatch_run *run, funcwatch_param *p) {
