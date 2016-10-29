@@ -101,7 +101,7 @@ TEST(PrintParamTest, InvalidInput){
 
   DynString stringToPrint = print_param(&p, 0);
   char *param_print = stringToPrint.text;
-  char *expected_print = "0, printParamTest, 0, param, 0, 00000000000000000000100000000000, int, [invalid]\n";
+  char *expected_print = "0, printParamTest, 0, param, 0, 00000000000000000001000000000000, int, [invalid]\n";
   ASSERT_STREQ(expected_print, param_print);
   dynstring_inner_free(stringToPrint);
 }
