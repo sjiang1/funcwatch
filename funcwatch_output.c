@@ -250,7 +250,7 @@ DynString print_param(funcwatch_param *p, int is_return) {
     snprintf(buffer, bufferSize, " %s\n", (char *) p->value);
     dynstring_append(&paramString, buffer);
   }
-  else if(p->flags & FW_STRUCT){
+  else if(p->flags & FW_STRUCT || p->flags & FW_UNION){
     // struct value is illustrated by its fields
     snprintf(buffer, bufferSize, " \n");
     dynstring_append(&paramString, buffer);
