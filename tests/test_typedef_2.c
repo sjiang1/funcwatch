@@ -9,7 +9,7 @@
 typedef struct Books {
   char title[50];
   char author[50];
-  char subject[100];
+  char subject[50];
   int book_id;
 } Book;
 
@@ -18,8 +18,18 @@ int foo(Book parameter_1){
   return parameter_1.book_id;
 }
 
+void initialize(char *p){
+  for(int i = 0; i < 50; i++){
+    p[i] = 0;
+  }
+}
+
 int main(int argc, char *argv[]) {
   Book mybook;
+  initialize(mybook.title);
+  initialize(mybook.author);
+  initialize(mybook.subject);
+  
   mybook.book_id = 10;
   strncpy(mybook.author, "Adam", 50);
 
