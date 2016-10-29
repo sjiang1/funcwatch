@@ -54,7 +54,9 @@ static char *get_name_from_type_die(Dwarf_Die type_die){
     type_name[1] = '\0';
   }
   if( tag == DW_TAG_subroutine_type ) {
-    type_name = "function pointer";
+    type_name = malloc(sizeof(char) * 17);
+    strcpy(type_name, "function pointer");
+    type_name[16] = '\0';
     return;
   }
   else if(type_name ==NULL){
@@ -78,8 +80,12 @@ static void assign_type_flags(funcwatch_param *p, Dwarf_Die type_die){
     return;
   }
 
-  if (tag == DW_TAG_pointer_type || tag == DW_TAG_array_type){
+  if (tag == DW_TAG_pointer_type){
     p->flags |= FW_POINTER;
+  }
+  else if (tag == DW_TAG_array_type){
+    p->flags |= FW_POINTER;
+    p->flags |= FW_ARRAY;
   }
   else if (tag == DW_TAG_structure_type ) {
     p->flags |= FW_STRUCT;

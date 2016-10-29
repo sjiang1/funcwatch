@@ -242,9 +242,6 @@ void funcwatch_get_params(funcwatch_run *run) {
       if(p->flags & FW_INVALID){
 	p->value = 0;
       }
-      else if(p->flags & FW_POINTER && p->flags & FW_CHAR){
-	resolve_string(run, p);
-      }
       else if(p->flags & FW_POINTER){
 	resolve_pointer(run, p);
       }
@@ -311,9 +308,7 @@ void reevaluate_params(funcwatch_run *run){
     p->addr = param_got->addr;
     
     if( !(p->flags & FW_INVALID) ){
-      if(p->flags & FW_POINTER && p->flags & FW_CHAR)
-	p = resolve_string(run, p);
-      else if(p->flags & FW_POINTER)
+      if(p->flags & FW_POINTER)
 	p = resolve_pointer(run, p);
       else if(p->flags & FW_UNION)
 	p = resolve_struct(run, p, 0);
@@ -589,9 +584,7 @@ funcwatch_run *funcwatch_run_program(char *prog_name,  char *func_name, char **a
 			  r->value = tmp;
 			}
 		      }
-		      if(r->flags & FW_POINTER && r->flags & FW_CHAR)
-			resolve_string(run, r);
-		      else if(r->flags & FW_POINTER)
+		      if(r->flags & FW_POINTER)
 			resolve_pointer(run, r);
 		      else if(r->flags & FW_ENUM)
 			resolve_enum(run, r);
@@ -651,18 +644,26 @@ static funcwatch_param *resolve_string(funcwatch_run *run, funcwatch_param *p){
     // return the current p
     return p;
   }
-
   
   long rc = 0;
   void * address = (void *) p->value;
   
-  funcwatch_param *pointee = (funcwatch_param *)malloc(sizeof(funcwatch_param));
-  funcwatch_param_initialize(pointee);
-
-  if(p->flags & FW_CHAR) {
-    int sz = 128;
-    char *buf = malloc(sz);
-    struct iovec liovec, riovec;
+  int sz = 10;
+  char *buf = malloc(sz);
+  struct iovec liovec, riovec;
+  liovec.iov_base = buf;
+  liovec.iov_len = sz;
+  riovec.iov_base = address;
+  riovec.iov_len = sz;
+  rc = process_vm_readv(run->child_pid, &liovec, 1, &riovec, 1, 0);
+  if(rc != sz) {
+    debug_printf("Error resolving pointer for variable %s:%s\n", p->name, strerror(errno));
+    p->flags |= FW_INVALID;
+  }
+  rc = (int) memchr(buf, 0, sz);
+  while(rc == -1)	 {
+    sz *= 2;
+    buf = realloc(buf, sz);
     liovec.iov_base = buf;
     liovec.iov_len = sz;
     riovec.iov_base = address;
@@ -673,24 +674,11 @@ static funcwatch_param *resolve_string(funcwatch_run *run, funcwatch_param *p){
       p->flags |= FW_INVALID;
     }
     rc = (int) memchr(buf, 0, sz);
-    while(rc == -1)	 {
-      sz *= 2;
-      buf = realloc(buf, sz);
-      liovec.iov_base = buf;
-      liovec.iov_len = sz;
-      riovec.iov_base = address;
-      riovec.iov_len = sz;
-      rc = process_vm_readv(run->child_pid, &liovec, 1, &riovec, 1, 0);
-      if(rc != sz) {
-	debug_printf("Error resolving pointer for variable %s:%s\n", p->name, strerror(errno));
-	p->flags |= FW_INVALID;
-      }
-      rc = (int) memchr(buf, 0, sz);
-    }
-    p->value = (long) buf;
-    p->size = strlen(buf);
-    return;
   }
+  p->value = 0;
+  memcpy(&(p->value), &buf,sizeof(char *));
+  p->size = strlen(buf);
+  return p;
 }
 
 static funcwatch_param *resolve_pointer(funcwatch_run *run, funcwatch_param *p) {
@@ -700,7 +688,6 @@ static funcwatch_param *resolve_pointer(funcwatch_run *run, funcwatch_param *p) 
     return p;
   }
 
-  
   long rc = 0;
   void * address = (void *) p->value;
   funcwatch_param *pointee = (funcwatch_param *)malloc(sizeof(funcwatch_param));
@@ -716,19 +703,27 @@ static funcwatch_param *resolve_pointer(funcwatch_run *run, funcwatch_param *p) 
   pointee->addr = p->value;
   
   get_type_info_from_parent_type_die(run->dwarf_ptr, p->type_die, pointee);
-  get_value_from_remote_process_inner(pointee, run->child_pid);
+
 
   funcwatch_param *lastEvolvedParam = pointee;
-  if(pointee->flags & FW_POINTER && pointee->flags & FW_CHAR)
-    lastEvolvedParam = resolve_string(run, pointee);
-  else if(pointee->flags & FW_POINTER)
-    lastEvolvedParam = resolve_pointer(run, pointee);
-  else if(pointee->flags & FW_ENUM)
-    lastEvolvedParam = resolve_enum(run, pointee);
-  else if(pointee->flags & FW_UNION)
-    lastEvolvedParam = resolve_struct(run, pointee, 0);
-  else if(pointee->flags &FW_STRUCT)
-    lastEvolvedParam = resolve_struct(run, pointee, 1);
+  if(pointee->flags & FW_CHAR){
+    p->flags |= FW_CHAR;
+    free(pointee->name);
+    free(pointee);
+    p->next = NULL;
+    lastEvolvedParam = resolve_string(run, p);
+  }else{
+    get_value_from_remote_process_inner(pointee, run->child_pid);
+    if(pointee->flags & FW_POINTER)
+      lastEvolvedParam = resolve_pointer(run, pointee);
+    else if(pointee->flags & FW_ENUM)
+      lastEvolvedParam = resolve_enum(run, pointee);
+    else if(pointee->flags & FW_UNION)
+      lastEvolvedParam = resolve_struct(run, pointee, 0);
+    else if(pointee->flags &FW_STRUCT)
+      lastEvolvedParam = resolve_struct(run, pointee, 1);
+  }
+  
   return lastEvolvedParam;
 
 }
@@ -815,19 +810,15 @@ static funcwatch_param *resolve_struct(funcwatch_run *run, funcwatch_param *p, i
     tmp->addr = struct_base + offset;
     if(!(tmp->flags & FW_INVALID)){ 
       /* After this if statement, the value should be set! */    
-      if(tmp->flags & FW_STRUCT && !(tmp->flags & FW_POINTER))
+      if(tmp->flags & FW_STRUCT || tmp->flags & FW_UNION
+	 || tmp->flags & FW_ARRAY){
+	// the array is actually inside struct, so if we treat it as a pointer, its value is the address
 	tmp->value = tmp->addr;
-      else if(tmp->flags & FW_UNION && !(tmp->flags & FW_POINTER))
-	tmp->value = tmp->addr; // if tmp is a union, we need the addr to resolve.
+      }
       else
 	get_value_from_remote_process_inner(tmp, run->child_pid);
       
-      //debug_printf("var_name: %s\n", var_name);
-      if(tmp->flags & FW_POINTER && tmp->flags & FW_CHAR && is_resolve_pointer ) {
-	resolve_string(run, tmp);
-	tmp = get_end_of_list(tmp);
-      }
-      else if(tmp->flags & FW_POINTER && is_resolve_pointer ) {
+      if(tmp->flags & FW_POINTER && is_resolve_pointer ) {
 	resolve_pointer(run, tmp);
 	tmp = get_end_of_list(tmp);
       }
