@@ -28,8 +28,8 @@ void vector_init(Vector *vector);
 void vector_append(Vector *vector, void *data_ptr);
 void *vector_get(Vector *vector, int index);
 void *vector_last(Vector *vector);
-void *vector_remove_last(Vector *vector); // return the last element, and remove it from the vector
-void *vector_remove_at(Vector *vector, int index); // return the element, and remove it from the vector
+void *vector_remove_last(Vector *vector);
+void *vector_remove_at(Vector *vector, int index);
 void vector_set(Vector *vector, int index, void *data_ptr);
 void vector_double_capacity_if_full(Vector *vector);
 void vector_inner_free(Vector *vector);
