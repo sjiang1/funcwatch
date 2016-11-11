@@ -69,3 +69,14 @@ tests/test_long_double
 tmp
 unittests/dynstring_unittests
 unittests/funcwatch_output_unittests
+test1
+
+ioselect
+parameterids.txt
+pickedIOids.txt
+
+html/
+ioexamples/
+latex/
+
+expected_csv.csv
