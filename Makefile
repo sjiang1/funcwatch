@@ -19,6 +19,10 @@ all: funcwatch tests unittests
 
 funcwatch: main.o funcwatch.o funcwatch_param_util.o dwarf_util.o funcwatch_output.o expression_stack.o vector.o stringutil.o commandhandle.o dynstring.o $(arch_srcfiles) 
 
+# for demo purpose
+test1: test_vectorappend.o vector.o
+	$(CC) $(CFLAGS) $^ -o $@
+
 tests: tests/test \
      tests/test_struct_0 tests/test_struct_1_pointer_member tests/test_struct_2_struct_pointer_member \
      tests/test_primitive_0_int tests/test_primitive_1_char tests/test_primitive_2_uchar tests/test_primitive_3_short \

@@ -13,6 +13,9 @@ extern "C" {
 #include <string.h>
 #include <limits.h>
 
+
+// https://www.happybearsoftware.com/implementing-a-dynamic-array
+  
 // Dynamic Array utility functions - declaration
 #define VECTOR_INITIAL_CAPACITY 100
 typedef struct {

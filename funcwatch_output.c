@@ -172,7 +172,12 @@ DynString print_param(funcwatch_param *p, int is_return) {
   }
   else if(p->flags & FW_POINTER){
     // non-null pointers
-    snprintf(buffer, bufferSize, " %s\n", "[memory addr]");
+    if(!PRINT_MEM_ADDR){
+      snprintf(buffer, bufferSize, " %s\n", "[memory addr]");
+    }
+    else{
+      snprintf(buffer, bufferSize, " %p\n", (void *)p->value);
+    }
     dynstring_append(&paramString, buffer);
   }
   else if((p->flags & FW_INT) && (p->flags & FW_SIGNED)) {

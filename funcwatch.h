@@ -12,6 +12,7 @@
 
 #define DEBUG 1
 #define MAX_CALL_CNT 100
+#define PRINT_MEM_ADDR 1
 
 typedef struct user_regs_struct user_regs_struct;
 typedef struct user_fpregs_struct user_fpregs_struct;

@@ -87,16 +87,6 @@ static void get_value(funcwatch_param *p, funcwatch_run *run, Dwarf_Unsigned fbr
  */
 void get_value_from_remote_process_inner(funcwatch_param *param, pid_t pid){
   errno = 0;
-	  
-  if(param->flags & FW_STRUCT && !(param->flags & FW_POINTER)){
-    debug_printf("Error: %s\n", "funcwatch does not access struct's values from remote process directly.");
-    return;
-  }
-
-  if(param->flags & FW_UNION && !(param->flags & FW_POINTER)){
-    debug_printf("Error: %s\n", "funcwatch does not access union's values from remote process directly.");
-    return;
-  }
 
   void *remote_address = (void *) param->addr;
   param->value = 0;
@@ -536,62 +526,64 @@ funcwatch_run *funcwatch_run_program(char *prog_name,  char *func_name, char **a
 		//rc = ptrace(PTRACE_GETREGS, run->child_pid, 0, &registers);
 		if(get_instruction_pointer(&registers) == address) {
 		  ++run->num_calls;
-		  if(run->num_calls >= MAX_CALL_CNT){
-		    exit(0);
+		  if(run->num_calls < MAX_CALL_CNT){
+		    int *call_id = (int *)malloc(sizeof(int));
+		    *call_id = run->num_calls - 1;
+		    vector_append(&(run->call_stack), call_id);
+		    funcwatch_get_params(run);
+		  }else{
+		    --run->num_calls;
 		  }
-		  int *call_id = (int *)malloc(sizeof(int));
-		  *call_id = run->num_calls - 1;
-		  vector_append(&(run->call_stack), call_id);
-		  funcwatch_get_params(run);
 		}
 		else { // get the return value for this run
 		  ++run->num_rets;
 		  if(run->num_rets >= MAX_CALL_CNT){
-		    exit(0);
+		    --run->num_rets;
 		  }
-		  
-		  // this cannot be moved to after getting the return value
-		  // in getting the return values,
-		  // we removed the last call_id in the run->call_stack
-		  reevaluate_params(run);
-
-		  Dwarf_Bool b;
-		  dwarf_hasattr(run->function_die, DW_AT_type, &b, &err);
-		  if(b) {
-		    funcwatch_param *r = run->return_values+run->num_rets-1;
-		    r->name = "$return_value";
-		    r->func_name = run->func_name;
-		    int *call_id = vector_remove_last(&(run->call_stack));
-		    r->call_num = *call_id;
-		    free(call_id);
-		    r->next = 0;
-		    r->struct_level = 0;
-		    get_type_info_from_var_die(run->dwarf_ptr, run->function_die, r);
-		    if( r->flags & FW_FLOAT && r->size == sizeof(long double)){
-		      r->flags |= FW_INVALID;
-		    }
-		    if(! (r->flags & FW_INVALID)){ 
-		      if(r->flags & FW_FLOAT && r->size > sizeof(long int)) {
-			r->value = get_return_register_float(&fpregisters);
+		  else{
+		    // this cannot be moved to after getting the return value
+		    // in getting the return values,
+		    // we removed the last call_id in the run->call_stack
+		    reevaluate_params(run);
+		    
+		    Dwarf_Bool b;
+		    dwarf_hasattr(run->function_die, DW_AT_type, &b, &err);
+		    if(b) {
+		      funcwatch_param *r = run->return_values+run->num_rets-1;
+		      r->name = "$return_value";
+		      r->func_name = run->func_name;
+		      int *call_id = vector_remove_last(&(run->call_stack));
+		      r->call_num = *call_id;
+		      free(call_id);
+		      r->next = 0;
+		      r->struct_level = 0;
+		      get_type_info_from_var_die(run->dwarf_ptr, run->function_die, r);
+		      if( r->flags & FW_FLOAT && r->size == sizeof(long double)){
+			r->flags |= FW_INVALID;
 		      }
-		      else{
-			r->value = get_return_register(&registers);
-			if(r->flags & FW_INT && r->size == 2 && r->flags & FW_SIGNED){
-			  short tmp = (short) r->value;
-			  r->value = tmp;
-			}else if(r->flags & FW_INT && r->size == 2){
-			  unsigned short tmp = (unsigned short) r->value;
-			  r->value = tmp;
+		      if(! (r->flags & FW_INVALID)){ 
+			if(r->flags & FW_FLOAT && r->size > sizeof(long int)) {
+			  r->value = get_return_register_float(&fpregisters);
 			}
+			else{
+			  r->value = get_return_register(&registers);
+			  if(r->flags & FW_INT && r->size == 2 && r->flags & FW_SIGNED){
+			    short tmp = (short) r->value;
+			    r->value = tmp;
+			  }else if(r->flags & FW_INT && r->size == 2){
+			    unsigned short tmp = (unsigned short) r->value;
+			    r->value = tmp;
+			  }
+			}
+			if(r->flags & FW_POINTER)
+			  resolve_pointer(run, r);
+			else if(r->flags & FW_ENUM)
+			  resolve_enum(run, r);
+			else if(r->flags & FW_UNION)
+			  resolve_struct(run,r,0);
+			else if(r->flags &FW_STRUCT)
+			  resolve_struct(run, r,1);
 		      }
-		      if(r->flags & FW_POINTER)
-			resolve_pointer(run, r);
-		      else if(r->flags & FW_ENUM)
-			resolve_enum(run, r);
-		      else if(r->flags & FW_UNION)
-			resolve_struct(run,r,0);
-		      else if(r->flags &FW_STRUCT)
-			resolve_struct(run, r,1);
 		    }
 		  }
 		}
