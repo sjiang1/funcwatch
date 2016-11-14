@@ -552,9 +552,7 @@ funcwatch_run *funcwatch_run_program(char *prog_name,  char *func_name, char **a
 		      funcwatch_param *r = run->return_values+run->num_rets-1;
 		      r->name = "$return_value";
 		      r->func_name = run->func_name;
-		      int *call_id = vector_remove_last(&(run->call_stack));
-		      r->call_num = *call_id;
-		      free(call_id);
+		      r->call_num = *(int *)vector_last(&(run->call_stack));
 		      r->next = 0;
 		      r->struct_level = 0;
 		      get_type_info_from_var_die(run->dwarf_ptr, run->function_die, r);
@@ -585,6 +583,9 @@ funcwatch_run *funcwatch_run_program(char *prog_name,  char *func_name, char **a
 			  resolve_struct(run, r,1);
 		      }
 		    }
+
+		    int * tmp = vector_remove_last(&(run->call_stack));
+		    free(tmp);
 		  }
 		}
 		
@@ -705,13 +706,23 @@ static funcwatch_param *resolve_pointer(funcwatch_run *run, funcwatch_param *p) 
     p->next = NULL;
     lastEvolvedParam = resolve_string(run, p);
   }else{
-    get_value_from_remote_process_inner(pointee, run->child_pid);
-    if(pointee->flags & FW_POINTER)
+    
+    if(pointee->flags & FW_STRUCT || pointee->flags & FW_UNION){
+      pointee->value = pointee->addr;
+    }
+    else{
+      get_value_from_remote_process_inner(pointee, run->child_pid);
+    }
+    
+    if(pointee->flags & FW_POINTER){
       lastEvolvedParam = resolve_pointer(run, pointee);
-    else if(pointee->flags & FW_ENUM)
+    }
+    else if(pointee->flags & FW_ENUM){
       lastEvolvedParam = resolve_enum(run, pointee);
-    else if(pointee->flags & FW_UNION)
+    }
+    else if(pointee->flags & FW_UNION){      
       lastEvolvedParam = resolve_struct(run, pointee, 0);
+    }
     else if(pointee->flags &FW_STRUCT)
       lastEvolvedParam = resolve_struct(run, pointee, 1);
   }
