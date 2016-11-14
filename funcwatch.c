@@ -694,9 +694,9 @@ static funcwatch_param *resolve_pointer(funcwatch_run *run, funcwatch_param *p) 
   pointee->func_name = strcpy_deep(p->func_name);
   pointee->call_num = p->call_num;
   pointee->addr = p->value;
+  pointee->struct_level = p->struct_level + 1;
   
   get_type_info_from_parent_type_die(run->dwarf_ptr, p->type_die, pointee);
-
 
   funcwatch_param *lastEvolvedParam = pointee;
   if(pointee->flags & FW_CHAR){
@@ -706,29 +706,32 @@ static funcwatch_param *resolve_pointer(funcwatch_run *run, funcwatch_param *p) 
     p->next = NULL;
     lastEvolvedParam = resolve_string(run, p);
   }else{
-    
-    if(pointee->flags & FW_STRUCT || pointee->flags & FW_UNION){
-      pointee->value = pointee->addr;
-    }
-    else{
-      get_value_from_remote_process_inner(pointee, run->child_pid);
-    }
-    
-    if(pointee->flags & FW_POINTER){
-      lastEvolvedParam = resolve_pointer(run, pointee);
-    }
-    else if(pointee->flags & FW_ENUM){
-      lastEvolvedParam = resolve_enum(run, pointee);
-    }
-    else if(pointee->flags & FW_UNION){      
-      lastEvolvedParam = resolve_struct(run, pointee, 0);
-    }
-    else if(pointee->flags &FW_STRUCT)
-      lastEvolvedParam = resolve_struct(run, pointee, 1);
-  }
-  
-  return lastEvolvedParam;
 
+    if(pointee->flags & FW_ENUM){
+	lastEvolvedParam = resolve_enum(run, pointee);
+    }
+    else if(pointee->struct_level < MAX_RESOLVE_DEPTH){
+      if(pointee->flags & FW_STRUCT || pointee->flags & FW_UNION){
+	pointee->value = pointee->addr;
+      }
+      else{
+	get_value_from_remote_process_inner(pointee, run->child_pid);
+      }
+    
+      if(pointee->flags & FW_POINTER){
+	lastEvolvedParam = resolve_pointer(run, pointee);
+      }
+      else if(pointee->flags & FW_UNION){      
+	lastEvolvedParam = resolve_struct(run, pointee, 0);
+      }
+      else if(pointee->flags &FW_STRUCT){
+	lastEvolvedParam = resolve_struct(run, pointee, 1);
+      }
+    }
+    
+  }
+
+  return lastEvolvedParam;
 }
 
 /*
@@ -746,15 +749,17 @@ static funcwatch_param *resolve_struct(funcwatch_run *run, funcwatch_param *p, i
   int rc = 0;
   if((p->flags & FW_STRUCT) || (p->flags & FW_UNION))
     rc=dwarf_child(p->type_die, &child_die, &err); // child_die is a tag_member
-  else
+  else{
     debug_printf("Error: %s\n", "resolve_struct only deals with struct or union variables.");
+    return;
+  }
   
   if(rc != DW_DLV_OK){
     debug_printf("Error:%s ", "cannot get a child type/var die from a struct/union var die.");
     if(rc == DW_DLV_NO_ENTRY)
       debug_printf("%s", "struct/union var die does not have child type/var die.");
   
-    if(rc ==DW_DLV_ERROR) 
+    if(rc == DW_DLV_ERROR) 
       debug_printf("%s", dwarf_errmsg(err));
 
     debug_printf("%s\n", " ");
@@ -813,44 +818,41 @@ static funcwatch_param *resolve_struct(funcwatch_run *run, funcwatch_param *p, i
     tmp->addr = struct_base + offset;
     if(!(tmp->flags & FW_INVALID)){ 
       /* After this if statement, the value should be set! */    
-      if(tmp->flags & FW_STRUCT || tmp->flags & FW_UNION
+      if(tmp->flags & FW_STRUCT
+	 || tmp->flags & FW_UNION
 	 || tmp->flags & FW_ARRAY){
 	// the array is actually inside struct, so if we treat it as a pointer, its value is the address
 	tmp->value = tmp->addr;
       }
-      else
+      else{
 	get_value_from_remote_process_inner(tmp, run->child_pid);
-      
-      if(tmp->flags & FW_POINTER && is_resolve_pointer ) {
-	resolve_pointer(run, tmp);
-	tmp = get_end_of_list(tmp);
-      }
-      else if(tmp->flags & FW_STRUCT
-	      && (is_resolve_pointer || !(tmp->flags & FW_POINTER))) {
-	if( level < MAX_RESOLVE_DEPTH){
-	  if(tmp->type != NULL && p->type != NULL){
-	    if(strcmp(tmp->type, p->type) != 0) {
-	      resolve_struct(run, tmp, is_resolve_pointer);
-	      // skip all the members in struct tmp
-	      tmp = get_end_of_list(tmp);
-	    }
-	  }else{
-	    resolve_struct(run, tmp, is_resolve_pointer);
-	    // skip all the members in struct tmp
-	    tmp = get_end_of_list(tmp);
-	  }
-	}
-      }
-      else if(tmp->flags & FW_UNION
-	      && (is_resolve_pointer || !(tmp->flags & FW_POINTER))){
-	resolve_struct(run, tmp, 0);
-	tmp = get_end_of_list(tmp);
-      }
-      else if(tmp->flags & FW_ENUM
-	      && (is_resolve_pointer || !(tmp->flags & FW_POINTER))) {
+      }	
+
+      if(tmp->flags & FW_ENUM
+	 && (is_resolve_pointer || !(tmp->flags & FW_POINTER))) {
 	resolve_enum(run, tmp);
 	tmp = get_end_of_list(tmp);
       }
+      else if( tmp->struct_level < MAX_RESOLVE_DEPTH ){
+
+	if(tmp->flags & FW_POINTER && is_resolve_pointer ) {
+	  resolve_pointer(run, tmp);
+	  tmp = get_end_of_list(tmp);
+	}
+	else if(tmp->flags & FW_STRUCT
+		&& (is_resolve_pointer || !(tmp->flags & FW_POINTER))) {
+	  resolve_struct(run, tmp, is_resolve_pointer);
+	  // move to the end of the parameter list
+	  tmp = get_end_of_list(tmp);
+	}
+	else if(tmp->flags & FW_UNION
+		&& (is_resolve_pointer || !(tmp->flags & FW_POINTER))){
+	  resolve_struct(run, tmp, 0);
+	  tmp = get_end_of_list(tmp);
+	}
+	
+      }
+      
     }
     // go to the next member
     Dwarf_Bool b;
