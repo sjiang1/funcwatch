@@ -45,6 +45,9 @@ static void get_value(funcwatch_param *p, funcwatch_run *run, Dwarf_Unsigned fbr
   Dwarf_Unsigned address = 0;
   int flags = 0;
   int eval_res = evaluate_address(run, &(p->var_die), DW_AT_location, fbreg, &flags, &address);
+  if(eval_res == -1){
+    p->flags |= FW_INVALID;
+  }
   if(flags & FW_INVALID){
     p->flags |= FW_INVALID;
   }
@@ -650,7 +653,7 @@ static funcwatch_param *resolve_string(funcwatch_run *run, funcwatch_param *p){
   riovec.iov_len = sz;
   rc = process_vm_readv(run->child_pid, &liovec, 1, &riovec, 1, 0);
   if(rc != sz) {
-    debug_printf("Error resolving pointer for variable %s:%s\n", p->name, strerror(errno));
+    debug_printf("Error resolving string for variable %s:%s\n", p->name, strerror(errno));
     p->flags |= FW_INVALID;
   }
   rc = (int) memchr(buf, 0, sz);
@@ -663,13 +666,13 @@ static funcwatch_param *resolve_string(funcwatch_run *run, funcwatch_param *p){
     riovec.iov_len = sz;
     rc = process_vm_readv(run->child_pid, &liovec, 1, &riovec, 1, 0);
     if(rc != sz) {
-      debug_printf("Error resolving pointer for variable %s:%s\n", p->name, strerror(errno));
+      debug_printf("Error resolving string for variable %s:%s\n", p->name, strerror(errno));
       p->flags |= FW_INVALID;
     }
     rc = (int) memchr(buf, 0, sz);
   }
-  p->value = 0;
-  memcpy(&(p->value), &buf,sizeof(char *));
+  p->value_string = 0;
+  memcpy(&(p->value_string), &buf ,sizeof(char *));
   p->size = strlen(buf);
   return p;
 }
@@ -703,7 +706,7 @@ static funcwatch_param *resolve_pointer(funcwatch_run *run, funcwatch_param *p) 
     p->flags |= FW_CHAR;
     free(pointee->name);
     free(pointee);
-    p->next = NULL;
+    p->next = 0;
     lastEvolvedParam = resolve_string(run, p);
   }else{
 

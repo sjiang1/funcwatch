@@ -52,6 +52,7 @@ static char *get_name_from_type_die(Dwarf_Die type_die){
     type_name = malloc(sizeof(char)*2);
     type_name[0] = '*';
     type_name[1] = '\0';
+    
   }
   if( tag == DW_TAG_subroutine_type ) {
     type_name = malloc(sizeof(char) * 17);
@@ -136,6 +137,26 @@ static void get_type_info_from_type_die(Dwarf_Debug dbg, Dwarf_Die type_die, fun
   int rc = 0;
   Dwarf_Off offset;
 
+  rc = dwarf_tag(type_die, &tag, &err);
+  if(rc != DW_DLV_OK) {
+    debug_printf("Error: %s\n", dwarf_errmsg(err));
+    return;
+  }
+
+  if(tag == DW_TAG_const_type){
+    p->flags |= FW_CONST_TYPE;
+    // get the child type of the current type (current type is const)
+    rc = dwarf_attr(type_die,DW_AT_type,&attr,&err);
+    if( rc != DW_DLV_OK){
+      debug_printf("Error: cannot get child type of a const type: %s\n", dwarf_errmsg(err));
+      p->flags |= FW_INVALID;
+      return;
+    }
+
+    rc = dwarf_global_formref(attr, &offset, &err);
+    rc = dwarf_offdie_b(dbg, offset, 1, &type_die, &err);
+  }
+  
   // for typedef, we use type def names for the type.
   p->type = get_name_from_type_die(type_die);
 
@@ -152,10 +173,7 @@ static void get_type_info_from_type_die(Dwarf_Debug dbg, Dwarf_Die type_die, fun
       break;
     }
 
-    Dwarf_Off offset;
     rc = dwarf_global_formref(attr, &offset, &err);
-
-    Dwarf_Die type_die;
     rc = dwarf_offdie_b(dbg, offset, 1, &current_type_die, &err);
     
     /* rc = dwarf_formudata(attr, &current_type_die, &err);
@@ -196,8 +214,15 @@ void get_type_info_from_parent_type_die(Dwarf_Debug dbg, Dwarf_Die parent_type_d
   rc = dwarf_global_formref(attr, &offset, &err);
 
   Dwarf_Die type_die;
-  rc = dwarf_offdie_b(dbg, offset, 1, &type_die, &err);
-  get_type_info_from_type_die(dbg, type_die, p);
+  rc = dwarf_offdie(dbg, offset, &type_die, &err);
+  if (rc == DW_DLV_OK){
+    get_type_info_from_type_die(dbg, type_die, p);
+  }
+  else{
+    debug_printf("Error when get type from parent type: %s\n", dwarf_errmsg(err));
+    p->flags |= FW_INVALID;
+    return;
+  }
 }
 
 void get_type_info_from_var_die(Dwarf_Debug dbg, Dwarf_Die var_die, funcwatch_param *p){

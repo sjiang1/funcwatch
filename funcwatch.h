@@ -49,6 +49,7 @@ struct funcwatch_param{
   Dwarf_Addr addr;
   uint64_t value;
   long double value_float;
+  char *value_string;
   /*-----------------*/
   
   // the level of this param in a struct OR union param
@@ -124,7 +125,8 @@ funcwatch_run *funcwatch_run_program(char *prog_name,  char *func_name, char **a
 #define FW_UNION 0x200
 #define FW_CONSTANT 0x400
 #define FW_ARRAY 0x800
-#define FW_INVALID 0x1000
+#define FW_CONST_TYPE 0x1000
+#define FW_INVALID 0x2000
 //flags for internal use
 #define FW_REG_VALUE 0x01
 #endif /* _funcwatch_H */

@@ -2,7 +2,7 @@
 #include "funcwatch.h"
 #include "funcwatch_param_util.h"
 
-funcwatch_param *getFirstNonPointer(funcwatch_param *pointer_param){
+funcwatch_param *getFirstNonPointer(struct funcwatch_param *pointer_param){
   funcwatch_param *p = pointer_param;
   
   while((p->flags & FW_POINTER) && p->value != NULL){

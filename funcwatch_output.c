@@ -166,7 +166,7 @@ DynString print_param(funcwatch_param *p, int is_return) {
   }
   else if(p->flags & FW_POINTER && p->flags & FW_CHAR){
     char * val = 0;
-    memcpy(&val, &(p->value), sizeof(char *));
+    memcpy(&val, &(p->value_string), sizeof(char *));
     snprintf(buffer, bufferSize, " \"%s\"\n", val);
     dynstring_append(&paramString, buffer);
   }

@@ -265,7 +265,7 @@ int evaluate_address(funcwatch_run *run, Dwarf_Die *die, Dwarf_Half tag,
   if(rc != 0) {
     debug_printf("Unable to get registers for setting function parameter in pid: %d: %s\n",
 		 run->child_pid, strerror(errno));
-    exit(-1);
+    return -1;
   }
   
   Dwarf_Error err;
