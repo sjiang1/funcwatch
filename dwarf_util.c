@@ -147,6 +147,11 @@ static void get_type_info_from_type_die(Dwarf_Debug dbg, Dwarf_Die type_die, fun
     p->flags |= FW_CONST_TYPE;
     // get the child type of the current type (current type is const)
     rc = dwarf_attr(type_die,DW_AT_type,&attr,&err);
+    if (rc == DW_DLV_NO_ENTRY) {
+      p->flags |= FW_VOID;
+      p->type = "void";
+      return;
+    }
     if( rc != DW_DLV_OK){
       debug_printf("Error: cannot get child type of a const type: %s\n", dwarf_errmsg(err));
       p->flags |= FW_INVALID;
